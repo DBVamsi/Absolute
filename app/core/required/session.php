@@ -39,20 +39,25 @@
   require_once $Dir_Root . '/core/classes/constants.php';
   $Constants = new Constants();
   require_once $Dir_Root . '/core/classes/user.php';
-  $User_Class = new User();
+  // $User_Class = new User(); // Will be initialized after PDO
   require_once $Dir_Root . '/core/classes/clan.php';
-  $Clan_Class = new Clan();
+  // $Clan_Class = new Clan(); // Will be initialized after PDO
   require_once $Dir_Root . '/core/classes/item.php';
-  $Item_Class = new Item();
+  // $Item_Class = new Item(); // Will be initialized after PDO
   require_once $Dir_Root . '/core/classes/shop.php';
-  $Shop_Class = new Shop();
+  // $Shop_Class = new Shop(); // Will be initialized after PDO
   require_once $Dir_Root . '/core/classes/navigation.php';
-  $Navigation = new Navigation();
+  $Navigation = new Navigation(); // Assuming Navigation doesn't need PDO for now, or will be refactored later.
   require_once $Dir_Root . '/core/classes/notification.php';
-  $Notification = new Notification();
+  // $Notification_Class = new Notification(); // Will be initialized after PDO
+  require_once $Dir_Root . '/core/classes/pokemon_service.php';
+  require_once $Dir_Root . '/staff/classes/ban_service.php';
+  require_once $Dir_Root . '/staff/classes/report_service.php';
+  require_once $Dir_Root . '/staff/classes/maintenance_service.php';
+  require_once $Dir_Root . '/staff/classes/staff_log_service.php'; // Added StaffLogService
   require_once $Dir_Root . '/core/classes/timer.php';
   require_once $Dir_Root . '/core/classes/weighter.php';
-  require_once $Dir_Root . '/core/classes/direct_message.php';
+  require_once $Dir_Root . '/core/classes/direct_message.php'; // Assuming DirectMessage doesn't need PDO or is already refactored.
 
   /**
    * Get all necessary functions and constants.
@@ -66,9 +71,21 @@
   require_once $Dir_Root . '/core/functions/is_between_dates.php';
   require_once $Dir_Root . '/core/functions/user_agent.php';
 
-  require_once $Dir_Root . '/core/functions/pokemon.php';
+  require_once $Dir_Root . '/core/functions/pokemon.php'; // Contains remaining global functions like CalculateStat, Natures
 
-  $PDO = connect_database('evo_chronicles_rpg');
+  $pdo_instance = connect_database('evo_chronicles_rpg');
+  $User_Class = new User($pdo_instance);
+  $Pokemon_Service = new PokemonService($pdo_instance);
+  $StaffLog_Service = new StaffLogService($pdo_instance);
+
+  $Clan_Class = new Clan($pdo_instance);
+  $Item_Class = new Item($pdo_instance, $Pokemon_Service, $User_Class);
+  $Shop_Class = new Shop($pdo_instance, $Pokemon_Service, $User_Class, $Item_Class);
+  $Notification_Class = new Notification($pdo_instance);
+  $Ban_Service = new BanService($pdo_instance, $User_Class, $StaffLog_Service);
+  $Report_Service = new ReportService($pdo_instance, $User_Class, $StaffLog_Service);
+  $Maintenance_Service = new MaintenanceService($pdo_instance, $StaffLog_Service);
+
 
   /**
    * Get the client's IP address.
@@ -90,7 +107,7 @@
   {
     $Parse_URL = parse_url((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]");
 
-    $Fetch_Page = $PDO->prepare("SELECT * FROM `pages` WHERE `URL` = ? LIMIT 1");
+    $Fetch_Page = $pdo_instance->prepare("SELECT * FROM `pages` WHERE `URL` = ? LIMIT 1");
     $Fetch_Page->execute([ $Parse_URL['path'] ]);
     $Fetch_Page->setFetchMode(PDO::FETCH_ASSOC);
     $Current_Page = $Fetch_Page->fetch();
@@ -127,10 +144,10 @@
 
     try
     {
-      $Update_Activity = $PDO->prepare("INSERT INTO `logs` (`Type`, `Page`, `Data`, `User_ID`) VALUES ('pageview', ?, ?, ?)");
+      $Update_Activity = $pdo_instance->prepare("INSERT INTO `logs` (`Type`, `Page`, `Data`, `User_ID`) VALUES ('pageview', ?, ?, ?)");
       $Update_Activity->execute([ $Current_Page['Name'], $Parse_URL['path'], $User_Data['ID'] ]);
 
-      $Update_User = $PDO->prepare("UPDATE `users` SET `Last_Active` = ?, `Last_Page` = ?, `Playtime` = `Playtime` + ? WHERE `ID` = ? LIMIT 1");
+      $Update_User = $pdo_instance->prepare("UPDATE `users` SET `Last_Active` = ?, `Last_Page` = ?, `Playtime` = `Playtime` + ? WHERE `ID` = ? LIMIT 1");
       $Update_User->execute([ $Time, $Current_Page['Name'], $Playtime, $User_Data['ID'] ]);
     }
     catch ( PDOException $e )

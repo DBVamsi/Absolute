@@ -11,27 +11,30 @@
     $Move_Slot
   )
   {
-    global $PDO;
+    global $Pokemon_Service; // Use PokemonService
 
-    try
+    $Move_List = $Pokemon_Service->GetAllUsableMoves();
+    if ( $Move_List === false ) // Error fetching moves
     {
-      $Get_Moves = $PDO->prepare("SELECT `ID`, `Name` FROM `moves` WHERE `Usable` = 1 ORDER BY `Name` ASC");
-      $Get_Moves->execute([ ]);
-      $Get_Moves->setFetchMode(PDO::FETCH_ASSOC);
-      $Move_List = $Get_Moves->fetchAll();
-    }
-    catch ( PDOException $e )
-    {
-      HandleError($e);
+      return "Error loading moves.";
     }
 
     $Move_Options = "";
-    foreach ( $Move_List as $Move_Data )
-      $Move_Options .= "<option value='{$Move_Data['ID']}'>{$Move_Data['Name']}</i>";
+    if ( !empty($Move_List) )
+    {
+      foreach ( $Move_List as $Move_Data )
+      {
+        // Ensure that $Move_Data['Name'] is properly escaped if it can contain special HTML characters
+        $Move_Name_Escaped = htmlspecialchars($Move_Data['Name'], ENT_QUOTES, 'UTF-8');
+        $Move_Options .= "<option value='{$Move_Data['ID']}'>{$Move_Name_Escaped}</option>";
+      }
+    }
 
+    // Pokemon_ID and Move_Slot are numbers, generally safe in HTML attributes here,
+    // but good practice would be to ensure they are (int) if coming from user input elsewhere.
     return "
       <select name='{$Pokemon_ID}_Move_{$Move_Slot}' onchange='UpdateMoveSlot({$Pokemon_ID}, {$Move_Slot});'>
-        <option>Select A Move</option>
+        <option value='0'>Select A Move</option> <!-- Added value 0 for "Select A Move" -->
         {$Move_Options}
       </select>
     ";
@@ -41,89 +44,35 @@
    * Update the specified Pokemon's move.
    *
    * @param $Pokemon_ID
-   * @param $Move_Slot
+   * @param $Move_Slot - Expected to be 1, 2, 3, or 4
    * @param $Move_ID
    */
   function UpdatePokemonMove
   (
     $Pokemon_ID,
-    $Move_Slot,
+    $Move_Slot, // This is the slot number (1-4)
     $Move_ID
   )
   {
-    global $PDO, $User_Data;
+    global $User_Data, $Pokemon_Service; // Use PokemonService
 
-    try
-    {
-      $Check_Pokemon_Ownership = $PDO->prepare("
-        SELECT `ID`, `Move_1`, `Move_2`, `Move_3`, `Move_4`
-        FROM `pokemon`
-        WHERE `ID` = ? AND `Owner_Current` = ?
-        LIMIT 1
-      ");
-      $Check_Pokemon_Ownership->execute([
-        $Pokemon_ID,
-        $User_Data['ID']
-      ]);
-      $Check_Pokemon_Ownership->setFetchMode(PDO::FETCH_ASSOC);
-      $Pokemon_Ownership = $Check_Pokemon_Ownership->fetch();
-    }
-    catch ( PDOException $e )
-    {
-      HandleError($e);
-    }
-
-    if ( empty($Pokemon_Ownership) )
+    // Validate Move_Slot (expecting 1, 2, 3, or 4)
+    if ( !in_array((int)$Move_Slot, [1, 2, 3, 4], true) )
     {
       return [
         'Success' => false,
-        'Message' => 'This Pok&eacute;mon does not belong to you'
+        'Message' => 'Invalid move slot selected.'
       ];
     }
 
-    $Pokemon_Moves = [
-      $Pokemon_Ownership['Move_1'],
-      $Pokemon_Ownership['Move_2'],
-      $Pokemon_Ownership['Move_3'],
-      $Pokemon_Ownership['Move_4']
-    ];
+    // $Move_ID should be an integer. If it's 0, it means unsetting the move.
+    $Move_ID = (int)$Move_ID;
 
-    $Pokemon_Moves[$Move_Slot] = (int) $Move_ID;
 
-    if ( count(array_unique($Pokemon_Moves)) !== 4 )
-    {
-      return [
-        'Success' => false,
-        'Message' => 'Pok&eacute;mon may not have multiple copies of the same move.'
-      ];
-    }
+    $Update_Result = $Pokemon_Service->UpdatePokemonMoveSlot($Pokemon_ID, $User_Data['ID'], (int)$Move_Slot, $Move_ID);
 
-    try
-    {
-      $PDO->beginTransaction();
-
-      $Update_Move = $PDO->prepare("
-        UPDATE `pokemon`
-        SET `Move_{$Move_Slot}` = ?
-        WHERE `ID` = ?
-        LIMIT 1
-      ");
-      $Update_Move->execute([
-        $Move_ID,
-        $Pokemon_ID
-      ]);
-
-      $PDO->commit();
-    }
-    catch ( PDOException $e )
-    {
-      $PDO->rollBack();
-
-      HandleError($e);
-    }
-
-    return [
-      'Success' => true,
-      'Message' => 'You have updated this Pok&eacute;mon\'s moves.'
-    ];
+    // UpdatePokemonMoveSlot in service should return an array like ['Success' => bool, 'Message' => string]
+    return $Update_Result;
   }
+
+[end of app/pages/pokemon_center/functions/moves.php]

@@ -1,8 +1,21 @@
 <?php
   class Encounter extends Player
   {
+    private $pdo; // PDO instance from Player's constructor via parent::__construct()
+    private $userClassInstance;
+    private $pokemonService;
+
     const ALERT_POKEDEX_IDS = [ 144, 151, 243, 244, 245, 249, 250, 384, 489, 639, 640, 716, 802, 888, 889 ];
     const ALERT_POKEMON_TYPES = [ 'Shiny' ];
+
+    // Player $playerInstance removed as Encounter extends Player, Player's constructor handles its own PDO.
+    public function __construct(PDO $pdo, User $userClassInstance, PokemonService $pokemonService)
+    {
+      parent::__construct($pdo); // Player (parent) constructor needs PDO
+      $this->pdo = $pdo; // Also store PDO here if methods in Encounter directly use it (like GetRandomEncounter)
+      $this->userClassInstance = $userClassInstance;
+      $this->pokemonService = $pokemonService;
+    }
 
     /**
      * Generate a wild encounter.
@@ -10,18 +23,20 @@
      * @param {string} $Player_Map_Name
      * @param {int} $Player_Map_Level
      */
-    public static function Generate
+    public function Generate
     (
       string $Player_Map_Name,
       int $Player_Map_Level,
       string $Encounter_Zone
     )
     {
+      // global $Pokemon_Service; // Removed
+
       $Shiny_Chance = 4192 - $Player_Map_Level;
       if ( $Shiny_Chance < 2096 )
         $Shiny_Chance = 2096;
 
-      $Generated_Encounter = self::GetRandomEncounter($Player_Map_Name, $Encounter_Zone);
+      $Generated_Encounter = $this->GetRandomEncounter($Player_Map_Name, $Encounter_Zone);
       if ( !$Generated_Encounter )
         return false;
 
@@ -29,7 +44,7 @@
       if ( mt_rand(1, $Shiny_Chance) === 1 )
         $Encounter_Type = 'Shiny';
 
-      $Pokedex_Data = GetPokedexData($Generated_Encounter['Pokedex_ID'], $Generated_Encounter['Alt_ID'], $Encounter_Type);
+      $Pokedex_Data = $this->pokemonService->GetPokedexData($Generated_Encounter['Pokedex_ID'], $Generated_Encounter['Alt_ID'], $Encounter_Type);
 
       $Page_Alert = null;
       if ( in_array($Encounter_Type, self::ALERT_POKEMON_TYPES) )
@@ -49,7 +64,8 @@
         'Pokedex_Data' => $Pokedex_Data,
         'Level' => mt_rand($Generated_Encounter['Min_Level'], $Generated_Encounter['Max_Level']),
         'Map_Exp_Yield' => mt_rand($Generated_Encounter['Min_Exp_Yield'], $Generated_Encounter['Max_Exp_Yield']),
-        'Gender' => GenerateGender($Generated_Encounter['Pokedex_ID'], $Generated_Encounter['Alt_ID']),
+        // GenerateGender is static on PokemonService
+        'Gender' => PokemonService::GenerateGender($Generated_Encounter['Pokedex_ID'], $Generated_Encounter['Alt_ID']),
         'Type' => $Encounter_Type,
         'Obtained_Text' => $Generated_Encounter['Obtained_Text'],
         'Generated_On' => time()
@@ -63,17 +79,15 @@
      *
      * @param {string} $Player_Map_Name
      */
-    public static function GetRandomEncounter
+    public function GetRandomEncounter
     (
       string $Player_Map_Name,
       int $Encounter_Zone = null
     )
     {
-      global $PDO;
-
       try
       {
-        $Fetch_Encounters = $PDO->prepare("
+        $Fetch_Encounters = $this->pdo->prepare("
           SELECT *
           FROM `map_encounters`
           WHERE `Map_Name` = ? AND `Active` = 1 AND (`Zone` = ? OR `Zone` IS NULL)
@@ -85,6 +99,7 @@
       catch ( \PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       if ( empty($Possible_Encounters) )
@@ -106,34 +121,40 @@
     /**
      * Catch the active encounter.
      */
-    public static function Catch()
+    public function Catch()
     {
       global $User_Data;
+      // global $Pokemon_Service; // Removed
 
       if ( empty($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']) )
         return false;
 
       $Encounter_Data = $_SESSION['EvoChroniclesRPG']['Maps']['Encounter'];
 
-      $Player_Instance = Player::GetInstance();
+      // Player::GetInstance is problematic. Assuming $this (as Encounter extends Player) is the correct Player instance.
+      // $Player_Instance = Player::GetInstance($this->pdo);
+      $Player_Instance = $this;
+
 
       $New_Steps_Till_Encounter = mt_rand(2, 21);
       $Player_Instance->SetStepsTillEncounter($New_Steps_Till_Encounter);
       $Get_Steps_Till_Encounter = $Player_Instance->GetStepsTillEncounter();
 
       $Player_Instance->UpdateMapExperience($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']);
-      User::UpdateStat($User_Data['ID'], 'Map_Exp_Earned', $_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']);
-      User::UpdateStat($User_Data['ID'], 'Map_Pokemon_Caught', 1);
+      $this->userClassInstance->UpdateStat($User_Data['ID'], 'Map_Exp_Earned', $_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']);
+      $this->userClassInstance->UpdateStat($User_Data['ID'], 'Map_Pokemon_Caught', 1);
 
-      $Spawn_Pokemon = CreatePokemon(
+      $Spawn_Pokemon = $this->pokemonService->CreatePokemon(
         $User_Data['ID'],
         $Encounter_Data['Pokedex_Data']['Pokedex_ID'],
         $Encounter_Data['Pokedex_Data']['Alt_ID'],
         $Encounter_Data['Level'],
         $Encounter_Data['Type'],
         $Encounter_Data['Gender'],
-        $Encounter_Data['Obtained_Text'],
+        $Encounter_Data['Obtained_Text']
       );
+
+      if (!$Spawn_Pokemon) return false; // Check if Pokemon creation failed
 
       $Catch_Text = "
         You caught a wild {$Spawn_Pokemon['Display_Name']} (Level: " . number_format($Encounter_Data['Level']) . ")
@@ -187,7 +208,7 @@
         </table>
       ";
 
-      self::LogEncounter();
+      $this->LogEncounter();
 
       unset($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']);
 
@@ -200,22 +221,24 @@
     /**
      * Release the active encounter.
      */
-    public static function Release()
+    public function Release()
     {
       global $User_Data;
 
       if ( empty($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']) )
         return false;
 
-      $Player_Instance = Player::GetInstance();
+      // $Player_Instance = Player::GetInstance($this->pdo);
+      $Player_Instance = $this;
+
 
       $New_Steps_Till_Encounter = mt_rand(2, 21);
       $Player_Instance->SetStepsTillEncounter($New_Steps_Till_Encounter);
       $Get_Steps_Till_Encounter = $Player_Instance->GetStepsTillEncounter();
 
       $Player_Instance->UpdateMapExperience($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']);
-      User::UpdateStat($User_Data['ID'], 'Map_Exp_Earned', $_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']);
-      User::UpdateStat($User_Data['ID'], 'Map_Pokemon_Released', 1);
+      $this->userClassInstance->UpdateStat($User_Data['ID'], 'Map_Exp_Earned', $_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']);
+      $this->userClassInstance->UpdateStat($User_Data['ID'], 'Map_Pokemon_Released', 1);
 
       $Release_Text = "
         You caught and released a(n) {$_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Pokedex_Data']['Display_Name']}!
@@ -223,7 +246,7 @@
         +" . number_format($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Map_Exp_Yield']) . " Map Exp.
       ";
 
-      self::LogEncounter();
+      $this->LogEncounter();
 
       unset($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']);
 
@@ -236,20 +259,22 @@
     /**
      * Run away from the active encounter.
      */
-    public static function Run()
+    public function Run()
     {
       global $User_Data;
 
       if ( empty($_SESSION['EvoChroniclesRPG']['Maps']['Encounter']) )
         return false;
 
-      $Player_Instance = Player::GetInstance();
+      // $Player_Instance = Player::GetInstance($this->pdo);
+      $Player_Instance = $this;
+
 
       $New_Steps_Till_Encounter = mt_rand(2, 21);
       $Player_Instance->SetStepsTillEncounter($New_Steps_Till_Encounter);
       $Get_Steps_Till_Encounter = $Player_Instance->GetStepsTillEncounter();
 
-      User::UpdateStat($User_Data['ID'], 'Map_Pokemon_Fled_From', 1);
+      $this->userClassInstance->UpdateStat($User_Data['ID'], 'Map_Pokemon_Fled_From', 1);
 
       $Run_Text = "You ran away from the wild {$_SESSION['EvoChroniclesRPG']['Maps']['Encounter']['Pokedex_Data']['Display_Name']}.";
 
@@ -264,25 +289,17 @@
     /**
      * Log the encounter to the database.
      */
-    public static function LogEncounter()
+    public function LogEncounter()
     {
-      global $PDO, $User_Data;
+      global $User_Data;
 
       try
       {
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-        $Log_Map_Encounter = $PDO->prepare("
+        $Log_Map_Encounter = $this->pdo->prepare("
           INSERT INTO `map_logs` (
-            `Map_Name`,
-            `Pokemon_Pokedex_ID`,
-            `Pokemon_Alt_ID`,
-            `Pokemon_Type`,
-            `Pokemon_Level`,
-            `Pokemon_Gender`,
-            `Encountered_On`,
-            `Caught_By`,
-            `Time_Caught`
+            `Map_Name`, `Pokemon_Pokedex_ID`, `Pokemon_Alt_ID`, `Pokemon_Type`, `Pokemon_Level`, `Pokemon_Gender`, `Encountered_On`, `Caught_By`, `Time_Caught`
           ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
         ");
         $Log_Map_Encounter->execute([
@@ -297,12 +314,11 @@
           time()
         ]);
 
-        $PDO->commit();
+        $this->pdo->commit();
       }
       catch ( \PDOException $e )
       {
-        $PDO->rollBack();
-
+        $this->pdo->rollBack();
         HandleError($e);
       }
     }

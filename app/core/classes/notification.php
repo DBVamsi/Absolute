@@ -1,16 +1,15 @@
 <?php
-	Class Notification
+	class Notification
 	{
-		public $PDO;
-		public $Purify;
+		private $pdo;
+		public $Purify; // This property was in the original code, but not initialized or used. Retaining it for now.
 		public $User_Data;
 
-		public function __construct()
+		public function __construct(PDO $pdo)
 		{
-			global $PDO;
-			$this->PDO = $PDO;
+			$this->pdo = $pdo;
 
-			global $User_Data;
+			global $User_Data; // User_Data is still global here as per task scope.
 			$this->User_Data = $User_Data;
 		}
 
@@ -19,15 +18,13 @@
 		 */
 		public function SendNotification($Sent_By, $Sent_To, $Message)
 		{
-			global $PDO;
-
 			$Sent_By = Purify($Sent_By);
 			$Sent_To = Purify($Sent_To);
 			$Message = Purify($Message);
 
 			try
 			{
-				$Insert = $PDO->prepare("INSERT INTO `notifications` (`Message`, `Sent_To`, `Sent_By`, `Sent_On`) VALUES (?, ?, ?, ?)");
+				$Insert = $this->pdo->prepare("INSERT INTO `notifications` (`Message`, `Sent_To`, `Sent_By`, `Sent_On`) VALUES (?, ?, ?, ?)");
 				$Insert->execute([ $Message, $Sent_To, $Sent_By, time() ]);
 			}
 			catch ( PDOException $e )
@@ -41,8 +38,6 @@
 		 */
 		public function ShowNotification($User_ID)
 		{
-			global $PDO;
-
 			$User = Purify($User_ID);
 
 			/**
@@ -51,7 +46,7 @@
 			 */
 			try
 			{
-				$Fetch_Notification = $PDO->prepare("SELECT * FROM `notifications` WHERE `Sent_To` = ? AND `Seen` = 'no'");
+				$Fetch_Notification = $this->pdo->prepare("SELECT * FROM `notifications` WHERE `Sent_To` = ? AND `Seen` = 'no'");
 				$Fetch_Notification->execute([ $User ]);
 				$Fetch_Notification->setFetchMode(PDO::FETCH_ASSOC);
 				$Notifications = $Fetch_Notification->fetchAll();
@@ -66,7 +61,7 @@
 						/**
 						 * Set the seen status of the notification to 'yes', so it doesn't get displayed anymore.
 						 */
-						$Update_Notification = $PDO->prepare("UPDATE `notifications` SET `Seen` = 'yes' WHERE `ID` = ?");
+						$Update_Notification = $this->pdo->prepare("UPDATE `notifications` SET `Seen` = 'yes' WHERE `ID` = ?");
 						$Update_Notification->execute([ $Value['ID'] ]);
 
 						echo "

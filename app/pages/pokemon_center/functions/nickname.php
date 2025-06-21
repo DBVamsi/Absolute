@@ -11,75 +11,20 @@
     $Nickname
   )
   {
-    global $PDO, $User_Data;
+    global $User_Data, $Pokemon_Service; // Use PokemonService
 
-    $Pokemon = GetPokemonData($Pokemon_ID);
+    // Ensure Pokemon_ID is an integer
+    $Pokemon_ID = (int)$Pokemon_ID;
 
-    if ( $Pokemon['Owner_Current'] != $User_Data['ID'] )
-    {
-      return [
-        'Success' => false,
-        'Message' => 'You may not update the nickname of a Pok&eacute;mon that is not yours.'
-      ];
-    }
+    // Nickname purification/validation should happen before calling the service,
+    // or within the service method itself if it's complex.
+    // For now, we'll assume $Nickname is passed as is, and Purify was used in the AJAX handler.
+    // The service method will handle the empty/null logic for Nickname.
 
-    if ( !empty($Nickname) && $Nickname != '' )
-    {
-      try
-      {
-        $PDO->beginTransaction();
+    $Result = $Pokemon_Service->UpdatePokemonNickname($Pokemon_ID, $User_Data['ID'], $Nickname);
 
-        $Update_Pokemon = $PDO->prepare("
-          UPDATE `pokemon`
-          SET `Nickname` = ?
-          WHERE `ID` = ?
-          LIMIT 1
-        ");
-        $Update_Pokemon->execute([
-          $Nickname,
-          $Pokemon['ID']
-        ]);
-
-        $PDO->commit();
-      }
-      catch ( PDOException $e )
-      {
-        $PDO->rollBack();
-
-        HandleError($e);
-      }
-
-      return [
-        'Success' => true,
-        'Message' => "<b>{$Pokemon['Display_Name']}</b>'s new nickname is <b>{$Nickname}</b>."
-      ];
-    }
-
-    try
-    {
-      $PDO->beginTransaction();
-
-      $Update_Pokemon = $PDO->prepare("
-        UPDATE `pokemon`
-        SET `Nickname` = null
-        WHERE `ID` = ?
-        LIMIT 1
-      ");
-      $Update_Pokemon->execute([
-        $Pokemon['ID']
-      ]);
-
-      $PDO->commit();
-    }
-    catch ( PDOException $e )
-    {
-      $PDO->rollBack();
-
-      HandleError($e);
-    }
-
-    return [
-      'Success' => true,
-      'Message' => "<b>{$Pokemon['Display_Name']}</b>'s nickname has been removed."
-    ];
+    // The service method UpdatePokemonNickname should return an array like ['Success' => bool, 'Message' => string]
+    return $Result;
   }
+
+[end of app/pages/pokemon_center/functions/nickname.php]

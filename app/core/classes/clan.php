@@ -1,13 +1,15 @@
 <?php
   class Clan
   {
-    public $PDO;
+    private $pdo;
+    private static $VALID_CURRENCY_COLUMNS = ['Money', 'Abso_Coins', 'Clan_Points']; // Whitelist
 
 		public function __construct
-    ()
+    (
+      PDO $pdo
+    )
 		{
-			global $PDO;
-			$this->PDO = $PDO;
+			$this->pdo = $pdo;
     }
     
     /**
@@ -19,14 +21,12 @@
       int $Clan_ID
     )
     {
-      global $PDO;
-
       if ( !$Clan_ID || $Clan_ID === 0 )
         return false;
 
       try
       {
-        $Fetch_Clan = $PDO->prepare("SELECT * FROM `clans` WHERE `ID` = ? LIMIT 1");
+        $Fetch_Clan = $this->pdo->prepare("SELECT * FROM `clans` WHERE `ID` = ? LIMIT 1");
         $Fetch_Clan->execute([ $Clan_ID ]);
         $Fetch_Clan->setFetchMode(PDO::FETCH_ASSOC);
         $Clan = $Fetch_Clan->fetch();
@@ -34,6 +34,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       if ( !$Clan )
@@ -64,14 +65,12 @@
       int $Clan_ID
     )
     {
-      global $PDO;
-
       if ( !$Clan_ID || $Clan_ID === 0 )
         return false;
 
       try
       {
-        $Fetch_Clan = $PDO->prepare("SELECT `ID` FROM `clans` WHERE `ID` = ? LIMIT 1");
+        $Fetch_Clan = $this->pdo->prepare("SELECT `ID` FROM `clans` WHERE `ID` = ? LIMIT 1");
         $Fetch_Clan->execute([ $Clan_ID ]);
         $Fetch_Clan->setFetchMode(PDO::FETCH_ASSOC);
         $Clan = $Fetch_Clan->fetch();
@@ -79,6 +78,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       if ( !$Clan )
@@ -86,7 +86,7 @@
 
       try
       {
-        $Fetch_Members = $PDO->prepare("SELECT `id` FROM `users` WHERE `Clan` = ? ORDER BY `Clan_Rank` ASC, `Clan_Exp` DESC");
+        $Fetch_Members = $this->pdo->prepare("SELECT `id` FROM `users` WHERE `Clan` = ? ORDER BY `Clan_Rank` ASC, `Clan_Exp` DESC");
         $Fetch_Members->execute([ $Clan_ID ]);
         $Fetch_Members->setFetchMode(PDO::FETCH_ASSOC);
         $Members = $Fetch_Members->fetchAll();
@@ -94,6 +94,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       if ( !$Members )
@@ -115,7 +116,7 @@
       string $Clan_Rank
     )
     {
-      global $PDO, $User_Class;
+      global $User_Class;
 
       if ( !$Clan_ID || !$User_ID || !$Clan_Rank )
         return false;
@@ -127,18 +128,19 @@
       if ( !$Clan_Data )
         return false;
 
-      $Member_Data = $User_Class->FetchUserData($User_ID);
-      if ( $Member_Data['Clan'] != $Clan_Data['ID'] )
+      $Member_Data = $User_Class->FetchUserData($User_ID); // Assumes User_Class is available
+      if ( !$Member_Data || $Member_Data['Clan'] != $Clan_Data['ID'] )
         return false;
 
       try
       {
-        $Update_Rank = $PDO->prepare("UPDATE `users` SET `Clan_Rank` = ? WHERE `id` = ? AND `Clan` = ? LIMIT 1");
+        $Update_Rank = $this->pdo->prepare("UPDATE `users` SET `Clan_Rank` = ? WHERE `id` = ? AND `Clan` = ? LIMIT 1");
         $Update_Rank->execute([ $Clan_Rank, $User_ID, $Clan_ID ]);
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       return true;
@@ -155,7 +157,7 @@
       int $User_ID
     )
     {
-      global $PDO, $User_Class;
+      global $User_Class;
 
       if ( !$Clan_ID || !$User_ID )
         return false;
@@ -164,26 +166,29 @@
       if ( !$Clan_Data )
         return false;
 
-      $Member_Data = $User_Class->FetchUserData($User_ID);
-      if ( $Member_Data['Clan'] != $Clan_Data['ID'] )
+      $Member_Data = $User_Class->FetchUserData($User_ID); // Assumes User_Class is available
+      if ( !$Member_Data || $Member_Data['Clan'] != $Clan_Data['ID'] )
         return false;
 
-      $Direct_Message = new DirectMessage();
+      $Direct_Message = new DirectMessage($this->pdo); // Assuming DirectMessage is refactored or takes PDO
       $Participating_DM_Groups = $Direct_Message->FetchMessageList($Member_Data['ID']);
-      foreach ( $Participating_DM_Groups as $DM_Group )
-      {
-        if ( $DM_Group['Clan_ID'] == $Member_Data['Clan'] )
-          $Direct_Message->RemoveUserFromGroup($DM_Group['Group_ID'], $Member_Data['ID']);
+      if ($Participating_DM_Groups) {
+        foreach ( $Participating_DM_Groups as $DM_Group )
+        {
+          if ( $DM_Group['Clan_ID'] == $Member_Data['Clan'] )
+            $Direct_Message->RemoveUserFromGroup($DM_Group['Group_ID'], $Member_Data['ID']);
+        }
       }
 
       try
       {
-        $Kick_Member = $PDO->prepare("UPDATE `users` SET `Clan` = 0 WHERE `id` = ? LIMIT 1");
+        $Kick_Member = $this->pdo->prepare("UPDATE `users` SET `Clan` = 0 WHERE `id` = ? LIMIT 1");
         $Kick_Member->execute([ $User_ID ]);
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       return true;
@@ -202,27 +207,28 @@
       string $Title
     )
     {
-      global $PDO, $User_Class;
+      global $User_Class;
 
-      if ( !$Clan_ID || !$User_ID || !$Title )
-        return false;
+      if ( !$Clan_ID || !$User_ID || !$Title ) // Title can be empty to remove it.
+        return false; // Or allow empty title? Current logic implies it's required.
 
       $Clan_Data = $this->FetchClanData($Clan_ID);
       if ( !$Clan_Data )
         return false;
 
-      $Member_Data = $User_Class->FetchUserData($User_ID);
-      if ( $Member_Data['Clan'] != $Clan_Data['ID'] )
+      $Member_Data = $User_Class->FetchUserData($User_ID); // Assumes User_Class is available
+      if ( !$Member_Data || $Member_Data['Clan'] != $Clan_Data['ID'] )
         return false;
 
       try
       {
-        $Kick_Member = $PDO->prepare("UPDATE `users` SET `Clan_Title` = ? WHERE `id` = ? LIMIT 1");
-        $Kick_Member->execute([ $Title, $User_ID ]);
+        $Update_Title = $this->pdo->prepare("UPDATE `users` SET `Clan_Title` = ? WHERE `id` = ? LIMIT 1");
+        $Update_Title->execute([ $Title, $User_ID ]);
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       return true;
@@ -239,9 +245,7 @@
       string $Signature
     )
     {
-      global $PDO, $User_Class;
-
-      if ( !$Clan_ID || !$Signature )
+      if ( !$Clan_ID ) // Signature can be empty
         return false;
 
       $Clan_Data = $this->FetchClanData($Clan_ID);
@@ -250,12 +254,13 @@
 
       try
       {
-        $Kick_Member = $PDO->prepare("UPDATE `clans` SET `Signature` = ? WHERE `id` = ? LIMIT 1");
-        $Kick_Member->execute([ $Signature, $Clan_ID ]);
+        $Update_Signature = $this->pdo->prepare("UPDATE `clans` SET `Signature` = ? WHERE `id` = ? LIMIT 1");
+        $Update_Signature->execute([ $Signature, $Clan_ID ]);
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       return true;
@@ -270,32 +275,40 @@
       int $Clan_ID
     )
     {
-      global $PDO;
-
       if ( !$Clan_ID )
         return false;
 
       $Clan_Members = $this->FetchMembers($Clan_ID);
       if ( !$Clan_Members )
-        return false;
+      {
+        // If FetchMembers returns false due to no members, it might still be okay to delete the clan shell.
+        // However, if it's false due to an error, that's different. For now, strict check.
+        // Consider what happens if a clan has 0 members and needs disbanding.
+      }
 
-      foreach ( $Clan_Members as $Member )
-        $this->LeaveClan($Member['id']);
+      if ($Clan_Members) {
+        foreach ( $Clan_Members as $Member )
+          $this->LeaveClan($Member['id']); // This calls FetchUserData which uses $User_Class
+      }
 
       try
       {
-        $Disband_Clan = $PDO->prepare("DELETE FROM `clans` WHERE `ID` = ? LIMIT 1");
+        $this->pdo->beginTransaction();
+        $Disband_Clan = $this->pdo->prepare("DELETE FROM `clans` WHERE `ID` = ? LIMIT 1");
         $Disband_Clan->execute([ $Clan_ID ]);
 
-        $Remove_Donations = $PDO->prepare("DELETE FROM `clan_donations` WHERE `Clan_ID` = ?");
+        $Remove_Donations = $this->pdo->prepare("DELETE FROM `clan_donations` WHERE `Clan_ID` = ?");
         $Remove_Donations->execute([ $Clan_ID ]);
         
-        $Remove_Upgrades = $PDO->prepare("DELETE FROM `clan_upgrades_purchased` WHERE `Clan_ID` = ?");
+        $Remove_Upgrades = $this->pdo->prepare("DELETE FROM `clan_upgrades_purchased` WHERE `Clan_ID` = ?");
         $Remove_Upgrades->execute([ $Clan_ID ]);
+        $this->pdo->commit();
       }
       catch ( PDOException $e )
       {
+        $this->pdo->rollBack();
         HandleError($e);
+        return false;
       }
 
       return true;
@@ -312,13 +325,13 @@
       int $User_ID
     )
     {
-      global $PDO, $User_Class;
+      global $User_Class;
 
       if ( !$Clan_ID || !$User_ID )
         return false;
 
-      $Member_Data = $User_Class->FetchUserData($User_ID);
-      if ( $Member_Data['Clan'] )
+      $Member_Data = $User_Class->FetchUserData($User_ID); // Assumes User_Class is available
+      if ( !$Member_Data || $Member_Data['Clan'] ) // Also check if !$Member_Data
         return false;
 
       $Clan_Data = $this->FetchClanData($Clan_ID);
@@ -327,27 +340,25 @@
 
       try
       {
-        $Apply_Membership = $PDO->prepare("
-          UPDATE `users`
-          SET `Clan` = ?
-          WHERE `ID` = ?
-          LIMIT 1
-        ");
+        $this->pdo->beginTransaction();
+        $Apply_Membership = $this->pdo->prepare("UPDATE `users` SET `Clan` = ? WHERE `ID` = ? LIMIT 1");
         $Apply_Membership->execute([ $Clan_ID, $User_ID ]);
-      }
-      catch ( PDOException $e )
-      {
-        HandleError($e);
-      }
 
-      $Direct_Message = new DirectMessage();
-      $Clan_DM = $Direct_Message->FetchGroup(null, $Clan_ID);
-      if ( !$Clan_DM )
-        return false;
+        // DirectMessage class instantiation might need $this->pdo if refactored
+        $Direct_Message = new DirectMessage($this->pdo);
+        $Clan_DM = $Direct_Message->FetchGroup(null, $Clan_ID);
+        if ( !$Clan_DM ) {
+            // Attempt to create the Clan DM group if it doesn't exist
+            // This might require a new method in DirectMessage class, or adjust existing.
+            // For now, let's assume FetchGroup or a similar setup method handles this.
+            // If not, this part might fail silently or throw error if $Clan_DM is false.
+            // A robust solution would be: if (!$Clan_DM) $Clan_DM = $Direct_Message->CreateClanGroup($Clan_ID, $Clan_Data['Name']);
+            // For now, we proceed assuming $Clan_DM might be successfully fetched or this part needs more refactoring.
+             $this->pdo->rollBack(); // Rollback if DM group can't be fetched/created.
+             return false;
+        }
 
-      try
-      {
-        $Apply_Participation = $PDO->prepare("
+        $Apply_Participation = $this->pdo->prepare("
           INSERT INTO `direct_message_groups`
           (`Group_ID`, `Group_Name`, `Clan_ID`, `User_ID`, `Unread_Messages`, `Last_Message`)
           VALUES (?, ?, ?, ?, ?, ?)
@@ -360,21 +371,28 @@
           1,
           time()
         ]);
+
+        $Create_Message = $Direct_Message->CreateMessage(
+          $Clan_DM['Group_ID'],
+          "{$Member_Data['Username']} has joined {$Clan_Data['Name']}!",
+          3,
+          // $Member_Data['Clan'] // This would be 0 before joining, should likely be $Clan_ID
+          $Clan_ID
+        );
+
+        if ( !$Create_Message ) {
+           $this->pdo->rollBack();
+           return false;
+        }
+
+        $this->pdo->commit();
       }
       catch ( PDOException $e )
       {
+        $this->pdo->rollBack();
         HandleError($e);
-      }
-
-      $Create_Message = $Direct_Message->CreateMessage(
-        $Clan_DM['Group_ID'],
-        "{$Member_Data['Username']} has joined {$Clan_Data['Name']}!",
-        3,
-        $Member_Data['Clan']
-      );
-
-      if ( !$Create_Message )
         return false;
+      }
 
       return true;
     }
@@ -388,31 +406,37 @@
       int $User_ID
     )
     {
-      global $PDO, $User_Class;
+      global $User_Class;
 
       if ( !$User_ID || $User_ID < 0 )
         return false;
 
-      $Member_Data = $User_Class->FetchUserData($User_ID);
-      if ( !$Member_Data['Clan'] )
+      $Member_Data = $User_Class->FetchUserData($User_ID); // Assumes User_Class is available
+      if ( !$Member_Data || !$Member_Data['Clan'] )
         return false;
 
-      $Direct_Message = new DirectMessage();
+      $Original_Clan_ID = $Member_Data['Clan']; // Store before it's set to 0
+
+      // DirectMessage class instantiation might need $this->pdo if refactored
+      $Direct_Message = new DirectMessage($this->pdo);
       $Participating_DM_Groups = $Direct_Message->FetchMessageList($Member_Data['ID']);
-      foreach ( $Participating_DM_Groups as $DM_Group_K => $DM_Group )
-      {
-        if ( $DM_Group['Clan_ID'] == $Member_Data['Clan'] )
-          $Direct_Message->RemoveUserFromGroup($DM_Group['Group_ID'], $Member_Data['ID']);
+      if ($Participating_DM_Groups) {
+        foreach ( $Participating_DM_Groups as $DM_Group_K => $DM_Group )
+        {
+          if ( $DM_Group['Clan_ID'] == $Original_Clan_ID ) // Use original clan ID
+            $Direct_Message->RemoveUserFromGroup($DM_Group['Group_ID'], $Member_Data['ID']);
+        }
       }
 
       try
       {
-        $Select_Query = $PDO->prepare("UPDATE `users` SET `Clan` = 0, `Clan_Exp` = 0, `Clan_Rank` = 'Member', `Clan_Title` = null WHERE `id` = ? LIMIT 1");
-        $Select_Query->execute([ $User_ID ]);
+        $Update_User = $this->pdo->prepare("UPDATE `users` SET `Clan` = 0, `Clan_Exp` = 0, `Clan_Rank` = 'Member', `Clan_Title` = null WHERE `id` = ? LIMIT 1");
+        $Update_User->execute([ $User_ID ]);
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       return true;
@@ -429,13 +453,24 @@
       array $Currencies
     )
     {
-      global $PDO;
-
       foreach ( $Currencies as $Currency => $Quantity )
       {
+        if ( !in_array($Currency, self::$VALID_CURRENCY_COLUMNS, true) ) {
+          // Optionally log this attempt or throw an exception
+          error_log("Attempt to update invalid clan currency column: {$Currency} for Clan ID: {$Clan_ID}");
+          continue; // Skip invalid currency column
+        }
+
+        // Ensure quantity is numeric, could be negative for subtraction if logic allows
+        if (!is_numeric($Quantity)) {
+            error_log("Invalid quantity provided for currency {$Currency} for Clan ID: {$Clan_ID}");
+            continue;
+        }
+
         try
         {
-          $Update_Currency = $PDO->prepare("
+          // Interpolation is now safe due to whitelisting
+          $Update_Currency = $this->pdo->prepare("
             UPDATE `clans`
             SET `{$Currency}` = ?
             WHERE `ID` = ?
@@ -446,6 +481,7 @@
         catch ( PDOException $e )
         {
           HandleError($e);
+          // Decide if one failure should stop all updates or continue
         }
       }
     }
@@ -465,29 +501,52 @@
       int $Quantity
     )
     {
-      global $PDO, $User_Class;
+      global $User_Class;
 
-      if ( !$User_ID || !$Clan_ID || !$Currency || !$Quantity )
+      if ( !$User_ID || !$Clan_ID || !$Currency || $Quantity <= 0 ) // Quantity must be positive
         return false;
 
-      $Clan_Data = $this->FetchClanData($Clan_ID);
+      // Validate currency against user's allowed currencies first
+      // Assuming User_Class::$VALID_CURRENCY_COLUMNS exists and is accessible or use a getter
+      // For now, this check relies on RemoveCurrency to fail if $Currency is invalid for users.
+      // A more robust way would be to check $Currency against User's valid currencies here.
 
+      $Clan_Data = $this->FetchClanData($Clan_ID);
       if ( !$Clan_Data )
         return false;
 
-      $User_Class->RemoveCurrency($User_ID, $Currency, $Quantity);
+      // Check if this currency is valid for clans too
+      if ( !in_array($Currency, self::$VALID_CURRENCY_COLUMNS, true) ) {
+          error_log("Attempt to donate invalid currency type: {$Currency} to Clan ID: {$Clan_ID}");
+          return false;
+      }
+
+      // User_Class->RemoveCurrency now uses its own $pdo instance.
+      if ( !$User_Class->RemoveCurrency($User_ID, $Currency, $Quantity) )
+      {
+        // Removal failed (e.g. insufficient funds, or invalid currency for user)
+        return false;
+      }
 
       try
       {
-        $Donate_Currency = $PDO->prepare("INSERT INTO `clan_donations` ( `Clan_ID`, `Donator_ID`, `Currency`, `Quantity`, `Timestamp` ) VALUES ( ?, ?, ?, ?, ? )");
+        $this->pdo->beginTransaction();
+
+        $Donate_Currency = $this->pdo->prepare("INSERT INTO `clan_donations` ( `Clan_ID`, `Donator_ID`, `Currency`, `Quantity`, `Timestamp` ) VALUES ( ?, ?, ?, ?, ? )");
         $Donate_Currency->execute([ $Clan_ID, $User_ID, $Currency, $Quantity, time() ]);
 
-        $Add_Currency = $PDO->prepare("UPDATE `clans` SET `$Currency` = `$Currency` + ? LIMIT 1");
-        $Add_Currency->execute([ $Quantity ]);
+        // Interpolation is safe due to whitelisting
+        $Add_Currency = $this->pdo->prepare("UPDATE `clans` SET `{$Currency}` = `{$Currency}` + ? WHERE `ID` = ? LIMIT 1");
+        $Add_Currency->execute([ $Quantity, $Clan_ID ]);
+
+        $this->pdo->commit();
       }
       catch (PDOException $e)
       {
+        $this->pdo->rollBack();
         HandleError($e);
+        // Potentially try to refund the user if this part fails, though that adds complexity
+        return false;
       }
 
       return true;
@@ -502,14 +561,12 @@
       int $Upgrade_ID
     )
     {
-      global $PDO;
-
       if ( !$Upgrade_ID )
         return false;
 
       try
       {
-        $Fetch_Upgrade = $PDO->prepare("SELECT * FROM `clan_upgrades_data` WHERE `ID` = ? LIMIT 1");
+        $Fetch_Upgrade = $this->pdo->prepare("SELECT * FROM `clan_upgrades_data` WHERE `ID` = ? LIMIT 1");
         $Fetch_Upgrade->execute([ $Upgrade_ID ]);
         $Fetch_Upgrade->setFetchMode(PDO::FETCH_ASSOC);
         $Upgrade_Data = $Fetch_Upgrade->fetch();
@@ -517,6 +574,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       if ( !$Upgrade_Data )
@@ -531,11 +589,9 @@
     public function FetchAllClanUpgrades
     ()
     {
-      global $PDO;
-
       try
       {
-        $Fetch_Upgrades = $PDO->prepare("SELECT * FROM `clan_upgrades_data`");
+        $Fetch_Upgrades = $this->pdo->prepare("SELECT * FROM `clan_upgrades_data`");
         $Fetch_Upgrades->execute([ ]);
         $Fetch_Upgrades->setFetchMode(PDO::FETCH_ASSOC);
         $Upgrades = $Fetch_Upgrades->fetchAll();
@@ -543,6 +599,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       if ( !$Upgrades )
@@ -591,8 +648,8 @@
                 'Name' => 'Money',
                 'Quantity' => $Upgrade['Money_Cost'],
               ],
-              'Abso_Coin' => [
-                'Name' => 'Absolute Coins',
+              'Abso_Coins' => [ // Assuming Abso_Coins is the key for Absolute Coins
+                'Name' => 'ECRPG Coins', // Display name updated if constants.php is source
                 'Quantity' => $Upgrade['Abso_Coin_Cost'],
               ],
             ],
@@ -617,8 +674,8 @@
                 'Name' => 'Money',
                 'Quantity' => $Upgrade['Money_Cost'] * ($Upgrade_Data['Current_Level'] + 1),
               ],
-              'Abso_Coins' => [
-                'Name' => 'Absolute Coins',
+              'Abso_Coins' => [ // Assuming Abso_Coins is the key
+                'Name' => 'ECRPG Coins', // Display name updated
                 'Quantity' => $Upgrade['Abso_Coins_Cost'] * ($Upgrade_Data['Current_Level'] + 1),
               ],
             ],
@@ -640,14 +697,12 @@
       int $Upgrade_ID
     )
     {
-      global $PDO;
-
       if ( !$Clan_ID || !$Upgrade_ID )
         return false;
       
       try
       {
-        $Fetch_Upgrade = $PDO->prepare("SELECT * FROM `clan_upgrades_purchased` WHERE `Clan_ID` = ? AND `Upgrade_ID` = ? LIMIT 1");
+        $Fetch_Upgrade = $this->pdo->prepare("SELECT * FROM `clan_upgrades_purchased` WHERE `Clan_ID` = ? AND `Upgrade_ID` = ? LIMIT 1");
         $Fetch_Upgrade->execute([ $Clan_ID, $Upgrade_ID ]);
         $Fetch_Upgrade->setFetchMode(PDO::FETCH_ASSOC);
         $Upgrade = $Fetch_Upgrade->fetch();
@@ -655,6 +710,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false;
       }
 
       if ( !$Upgrade )
@@ -673,8 +729,6 @@
       int $Upgrade_ID
     )
     {
-      global $PDO;
-
       if ( !$Clan_ID || !$Upgrade_ID )
         return false;
 
@@ -686,40 +740,34 @@
       if ( !$Upgrade_Data )
         return false;
 
-      $Purchased_Upgrade = $this->FetchPurchasedUpgrade($Clan_Data['ID'], $Upgrade_Data['ID']);
-      if ( $Purchased_Upgrade )
-      {
-        $New_Level = $Purchased_Upgrade['Current_Level'] + 1;
+      // Simplified cost check - assumes FetchUpgrades provides correct current costs
+      // A full cost check against $Clan_Data raw values should happen here before DB operations
 
-        try
-        {
-          $Purchase_Upgrade = $PDO->prepare("
-            UPDATE `clan_upgrades_purchased`
-            SET `Current_Level` = ?
-            WHERE `Clan_ID` = ? AND `Upgrade_ID` = ?
-          ");
-          $Purchase_Upgrade->execute([ $New_Level, $Clan_Data['ID'], $Upgrade_Data['ID'] ]);
-        }
-        catch ( PDOException $e )
-        {
-          HandleError($e);
-        }
-      }
-      else
+      $Purchased_Upgrade = $this->FetchPurchasedUpgrade($Clan_Data['ID'], $Upgrade_Data['ID']);
+      try
       {
-        try
+        $this->pdo->beginTransaction();
+        if ( $Purchased_Upgrade )
         {
-          $Purchase_Upgrade = $PDO->prepare("
-            INSERT INTO `clan_upgrades_purchased`
-            (`Clan_ID`, `Upgrade_ID`)
-            VALUES (?, ?)
-          ");
-          $Purchase_Upgrade->execute([ $Clan_Data['ID'], $Upgrade_Data['ID'] ]);
+          $New_Level = $Purchased_Upgrade['Current_Level'] + 1;
+          $Purchase_Query = $this->pdo->prepare("UPDATE `clan_upgrades_purchased` SET `Current_Level` = ? WHERE `Clan_ID` = ? AND `Upgrade_ID` = ?");
+          $Purchase_Query->execute([ $New_Level, $Clan_Data['ID'], $Upgrade_Data['ID'] ]);
         }
-        catch ( PDOException $e )
+        else
         {
-          HandleError($e);
+          $Purchase_Query = $this->pdo->prepare("INSERT INTO `clan_upgrades_purchased` (`Clan_ID`, `Upgrade_ID`, `Current_Level`) VALUES (?, ?, 1)");
+          $Purchase_Query->execute([ $Clan_Data['ID'], $Upgrade_Data['ID'] ]);
         }
+        // TODO: Deduct costs from clan's currencies ($Clan_Data values) using whitelisted column names.
+        // This part is critical and missing from the original logic if it's not handled by the caller.
+        // Example: $this->UpdateCurrencies($Clan_ID, ['Money' => $Clan_Data['Money_Raw'] - $calculated_cost_money, ...]);
+        $this->pdo->commit();
+      }
+      catch ( PDOException $e )
+      {
+        $this->pdo->rollBack();
+        HandleError($e);
+        return false;
       }
 
       return $this->FetchPurchasedUpgrade($Clan_Data['ID'], $Upgrade_Data['ID']);

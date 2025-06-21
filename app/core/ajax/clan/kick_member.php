@@ -29,7 +29,7 @@
     return;
   }
 
-  $User_ID = Purify($_POST['User_ID']);
+  $User_ID = (int)($_POST['User_ID']);
   $Fetched_User = $User_Class->FetchUserData($User_ID);
   $User_Clan = $Clan_Class->FetchClanData($Fetched_User['Clan']);
 

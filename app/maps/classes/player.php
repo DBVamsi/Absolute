@@ -2,10 +2,12 @@
   class Player extends Map
   {
     private static $Instance;
+    private $pdo;
     public $Map_ID;
 
-    public function __construct()
+    public function __construct(PDO $pdo)
     {
+      $this->pdo = $pdo;
       if ( empty($_SESSION['EvoChroniclesRPG']['Maps']) )
       {
         $_SESSION['EvoChroniclesRPG']['Maps'] = [];
@@ -15,11 +17,31 @@
 
     /**
      * Fetch the player's current instance.
+     * NOTE: This Singleton pattern will need adjustment for PDO injection if GetInstance
+     * is called before the main Player object is instantiated with PDO in session.php.
+     * For this refactor, we assume $pdo is available when GetInstance is appropriately used.
+     * A better approach might be to ensure GetInstance receives PDO or the main instance is always used.
      */
-    public static function GetInstance()
+    public static function GetInstance(PDO $pdo = null)
     {
       if ( empty(self::$Instance) )
-        self::$Instance = new Player();
+      {
+        if ($pdo === null) {
+          // This is problematic if called before session.php sets up the main $Player instance.
+          // For now, this path might lead to issues if not handled carefully by callers.
+          // Ideally, the global $pdo_instance from session.php should be passed here by any
+          // code that might call GetInstance() before $Player_Class is initialized.
+          // However, the current refactor focuses on objects already created in session.php.
+          throw new Exception("PDO instance not provided to Player::GetInstance and no instance exists.");
+        }
+        self::$Instance = new Player($pdo);
+      }
+      else if ($pdo !== null && self::$Instance->pdo === null)
+      {
+        // If an instance exists but without PDO, and PDO is now provided.
+        self::$Instance->pdo = $pdo;
+      }
+
 
       return self::$Instance;
     }
@@ -67,6 +89,8 @@
       if ( empty($Tile_X) || empty($Tile_Y) || empty($Tile_Z) || !$Is_Warp_Tile )
         return false;
 
+      // Assumes $this->pdo is available for SetMap and SetPosition if they use it.
+      // The Map constructor called by $this->SetPosition() will need $this (Player instance).
       if ( !$this->IsNextToTile($Tile_X, $Tile_Y + 1, $Tile_Z) )
         return false;
 
@@ -80,7 +104,7 @@
         return false;
 
       $this->SetMap($Get_Designated_Warp_Map->value);
-      $this->SetPosition();
+      $this->SetPosition(); // This calls new Map() which needs refactoring to accept Player
 
       return $this->GetMap();
     }
@@ -127,13 +151,13 @@
      */
     public function GetPosition()
     {
-      global $PDO, $User_Data;
+      global $User_Data; // User_Data is still global here
 
       if ( empty($_SESSION['EvoChroniclesRPG']['Maps']['Position']) )
       {
         try
         {
-          $Fetch_Map_Position = $PDO->prepare("
+          $Fetch_Map_Position = $this->pdo->prepare("
             SELECT `Map_X`, `Map_Y`, `Map_Z`
             FROM `users`
             WHERE `ID` = ?
@@ -169,11 +193,13 @@
       int $z = null
     )
     {
-      global $User_Data, $PDO;
+      global $User_Data; // User_Data is still global here
 
       if ( empty(func_get_args()) )
       {
-        $Map = new Map($this->GetMap());
+        // This instantiation of Map will need to be refactored when Map constructor changes.
+        // For now, we assume it works or Map's constructor is adapted.
+        $Map = new Map($this, $this->GetMap()); // Pass $this (Player instance)
         $Map->GetMapObjects();
         $Spawn_Coords = $Map->GetSpawnCoords();
 
@@ -198,9 +224,9 @@
 
       try
       {
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-        $Set_Position = $PDO->prepare("
+        $Set_Position = $this->pdo->prepare("
           UPDATE `users`
           SET `Map_X` = ?, `Map_Y` = ?, `Map_Z` = ?
           WHERE `ID` = ?
@@ -208,11 +234,11 @@
         ");
         $Set_Position->execute([ $x, $y, $z, $User_Data['ID'] ]);
 
-        $PDO->commit();
+        $this->pdo->commit();
       }
       catch ( \PDOException $e )
       {
-        $PDO->rollBack();
+        $this->pdo->rollBack();
         HandleError($e);
       }
 
@@ -224,7 +250,7 @@
      */
     public function GetStepsTillEncounter()
     {
-      global $User_Data;
+      global $User_Data; // User_Data is still global here
 
       if ( empty($_SESSION['EvoChroniclesRPG']['Maps']['Map_Steps_To_Encounter']) )
         return $User_Data['Map_Steps_To_Encounter'];
@@ -242,30 +268,50 @@
       int $Steps = -1
     )
     {
-      global $User_Data, $PDO;
+      global $User_Data; // User_Data is still global here
 
       try
       {
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-        $Update_Steps = $PDO->prepare("
+        $Update_Steps = $this->pdo->prepare("
           UPDATE `users`
           SET `Map_Steps_To_Encounter` = `Map_Steps_To_Encounter` + ?
           WHERE `ID` = ?
           LIMIT 1
         ");
         $Update_Steps->execute([ $Steps, $User_Data['ID'] ]);
+
+        $this->pdo->commit();
       }
       catch ( \PDOException $e )
       {
-        $PDO->rollBack();
+        $this->pdo->rollBack();
         HandleError($e);
       }
 
-      $PDO->commit();
-
-      $_SESSION['EvoChroniclesRPG']['Maps']['Map_Steps_To_Encounter'] = $User_Data['Map_Steps_To_Encounter'];
+      // Update session variable to reflect the change immediately
+      $_SESSION['EvoChroniclesRPG']['Maps']['Map_Steps_To_Encounter'] = $this->GetStepsTillEncounterFromDB($User_Data['ID']); // Helper to fetch current DB value
       return $_SESSION['EvoChroniclesRPG']['Maps']['Map_Steps_To_Encounter'];
+    }
+
+    /**
+     * Helper function to get current steps from DB. Used after update.
+     */
+    private function GetStepsTillEncounterFromDB(int $UserID)
+    {
+        try
+        {
+            $Fetch_Steps = $this->pdo->prepare("SELECT `Map_Steps_To_Encounter` FROM `users` WHERE `ID` = ? LIMIT 1");
+            $Fetch_Steps->execute([$UserID]);
+            $Result = $Fetch_Steps->fetch();
+            return $Result ? (int)$Result['Map_Steps_To_Encounter'] : 0;
+        }
+        catch (\PDOException $e)
+        {
+            HandleError($e);
+            return 0; // Fallback
+        }
     }
 
     /**
@@ -286,7 +332,7 @@
       string $Map_ID
     )
     {
-      global $User_Data, $PDO;
+      global $User_Data; // User_Data is still global here
 
       $this->Map_ID = $Map_ID;
       $_SESSION['EvoChroniclesRPG']['Maps']['Map_ID'] = $Map_ID;
@@ -299,21 +345,21 @@
 
       try
       {
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-        $Set_Position = $PDO->prepare("
+        $Set_Map = $this->pdo->prepare("
           UPDATE `users`
           SET `Map_ID` = ?
           WHERE `ID` = ?
           LIMIT 1
         ");
-        $Set_Position->execute([ $Map_ID, $User_Data['ID'] ]);
+        $Set_Map->execute([ $Map_ID, $User_Data['ID'] ]);
 
-        $PDO->commit();
+        $this->pdo->commit();
       }
       catch ( \PDOException $e )
       {
-        $PDO->rollBack();
+        $this->pdo->rollBack();
         HandleError($e);
       }
 
@@ -325,10 +371,11 @@
      */
     public function LoadLastMap()
     {
-      global $User_Data;
+      global $User_Data; // User_Data is still global here
 
       if ( empty($User_Data['Map_ID']) )
       {
+        // SetPosition will call new Map() which needs player instance
         $this->SetPosition();
       }
       else
@@ -343,7 +390,7 @@
      */
     public function GetMapLevelAndExp()
     {
-      global $User_Data;
+      global $User_Data; // User_Data is still global here
 
       return [
         'Map_Level' => FetchLevel($User_Data['Map_Experience'], 'Map'),
@@ -361,13 +408,13 @@
       int $Exp_Earned
     )
     {
-      global $PDO, $User_Data;
+      global $User_Data; // User_Data is still global here
 
       try
       {
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-        $Update_Map_Exp = $PDO->prepare("
+        $Update_Map_Exp = $this->pdo->prepare("
           UPDATE `users`
           SET `Map_Experience` = `Map_Experience` + ?
           WHERE `ID` = ?
@@ -375,11 +422,12 @@
         ");
         $Update_Map_Exp->execute([ $Exp_Earned, $User_Data['ID'] ]);
 
-        $PDO->commit();
+        $this->pdo->commit();
       }
       catch ( \PDOException $e )
       {
-        $PDO->rollBack();
+        $this->pdo->rollBack();
+        HandleError($e); // It's good practice to handle or log the error.
       }
     }
   }

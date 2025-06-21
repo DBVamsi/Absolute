@@ -64,7 +64,7 @@
     {
       $Registrant_Data = [
         'Username' => Purify($_POST['Username']),
-        'Password' => Purify($_POST['Password']),
+        'Password' => $_POST['Password'], // Removed Purify()
       ];
 
       $Selected_Gender = Purify($_POST['Gender']);

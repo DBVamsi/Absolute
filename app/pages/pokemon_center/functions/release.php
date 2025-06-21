@@ -4,44 +4,18 @@
    */
   function GetReleasablePokemon()
   {
-    global $PDO, $User_Data;
+    global $Pokemon_Service, $User_Data; // Pokemon_Service is now used
 
-    try
-    {
-      $Get_Releasable_Pokemon = $PDO->prepare("
-        SELECT `ID`
-        FROM `pokemon`
-        WHERE `Owner_Current` = ? AND `Location` = 'Box' AND `Frozen` = 0
-      ");
-      $Get_Releasable_Pokemon->execute([
-        $User_Data['ID']
-      ]);
-      $Get_Releasable_Pokemon->setFetchMode(PDO::FETCH_ASSOC);
-      $Releasable_Pokemon = $Get_Releasable_Pokemon->fetchAll();
-    }
-    catch ( PDOException $e )
-    {
-      HandleError($e);
-    }
+    // The direct PDO query is now encapsulated in PokemonService
+    $Releasable_Pokemon_Data = $Pokemon_Service->GetUserReleasablePokemonIDsAndBasicInfo($User_Data['ID']);
 
-    if ( !empty($Releasable_Pokemon) )
-    {
-      foreach ( $Releasable_Pokemon as $Index => $Pokemon )
-      {
-        $Pokemon_Info = GetPokemonData($Pokemon['ID']);
-
-        $Releasable_Pokemon[$Index] = [
-          'ID' => $Pokemon_Info['ID'],
-          'Display_Name' => $Pokemon_Info['Display_Name'],
-          'Gender' => $Pokemon_Info['Gender'],
-          'Level' => $Pokemon_Info['Level']
-        ];
-      }
-    }
+    // $Releasable_Pokemon_Data already contains the necessary formatted info.
+    // If further processing of $Pokemon_Info was needed, it would be done here.
+    // For now, the structure returned by GetUserReleasablePokemonIDsAndBasicInfo matches the old structure.
 
     return [
-      'Amount' => count($Releasable_Pokemon),
-      'Pokemon' => $Releasable_Pokemon
+      'Amount' => $Releasable_Pokemon_Data['Amount'],
+      'Pokemon' => $Releasable_Pokemon_Data['Pokemon']
     ];
   }
 
@@ -55,7 +29,7 @@
     $Selected_Pokemon
   )
   {
-    global $PDO, $User_Data;
+    global $Pokemon_Service, $User_Data; // Pokemon_Service is now used
 
     if ( empty($Selected_Pokemon) )
     {
@@ -69,35 +43,24 @@
 
     $_SESSION['EvoChroniclesRPG']['Release']['Releasable_Pokemon'] = [];
 
-    foreach ( $Selected_Pokemon_Array as $Pokemon )
+    foreach ( $Selected_Pokemon_Array as $Pokemon_ID_Json ) // Assuming $Pokemon is just an ID from JSON
     {
-      try
-      {
-        $Check_Pokemon_Ownership = $PDO->prepare("
-          SELECT `ID`
-          FROM `pokemon`
-          WHERE `ID` = ? AND `Owner_Current` = ?
-          LIMIT 1
-        ");
-        $Check_Pokemon_Ownership->execute([
-          $Pokemon,
-          $User_Data['ID']
-        ]);
-        $Check_Pokemon_Ownership->setFetchMode(PDO::FETCH_ASSOC);
-        $Pokemon_Ownership = $Check_Pokemon_Ownership->fetch();
-      }
-      catch ( PDOException $e )
-      {
-        HandleError($e);
-      }
+      $PokemonID = filter_var($Pokemon_ID_Json, FILTER_SANITIZE_NUMBER_INT);
 
-      if ( empty($Pokemon_Ownership) )
+      // The direct PDO query is now encapsulated in PokemonService
+      $Is_Owned = $Pokemon_Service->CheckPokemonOwnership($PokemonID, $User_Data['ID']);
+
+      if ( !$Is_Owned )
         continue;
 
-      $Pokemon_Info = GetPokemonData($Pokemon);
+      // GetPokemonData is now a service method
+      $Pokemon_Info = $Pokemon_Service->GetPokemonData($PokemonID);
+      if (!$Pokemon_Info) {
+        continue; // Should not happen if ownership check passed, but good practice
+      }
 
       $_SESSION['EvoChroniclesRPG']['Release']['Releasable_Pokemon'][] = [
-        'ID' => $Pokemon,
+        'ID' => $PokemonID, // Use the sanitized ID
         'Display_Name' => $Pokemon_Info['Display_Name'],
         'Gender' => $Pokemon_Info['Gender'],
         'Level' => $Pokemon_Info['Level']
@@ -114,12 +77,16 @@
    */
   function FinalizeRelease()
   {
-    global $User_Data;
+    global $User_Data, $Pokemon_Service; // Pokemon_Service is now used
 
     foreach ( $_SESSION['EvoChroniclesRPG']['Release']['Releasable_Pokemon'] as $Pokemon )
     {
-      ReleasePokemon($Pokemon['ID'], $User_Data['ID']);
+      // ReleasePokemon is now a service method, and User_Data['ID'] is passed
+      $Pokemon_Service->ReleasePokemon($Pokemon['ID'], $User_Data['ID']);
     }
+
+    // Clear the session data after processing
+    unset($_SESSION['EvoChroniclesRPG']['Release']['Releasable_Pokemon']);
 
     return [
       'Success' => true,

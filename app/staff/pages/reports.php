@@ -13,9 +13,9 @@
     exit;
   }
 
-  require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/report.php';
+  // require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/report.php'; // Removed
 
-  $Active_Reports = GetActiveReports();
+  $Active_Reports = $Report_Service->GetActiveReports(); // Updated
 ?>
 
 <div style='display: flex; flex-wrap: wrap; justify-content: center;'>
@@ -31,7 +31,7 @@
 
   <div style='display: flex; flex-wrap: wrap; gap: 10px;' id='Active_Report_List'>
     <?php
-      echo ShowActiveReports($Active_Reports);
+      echo $Report_Service->ShowActiveReports($Active_Reports); // Updated
     ?>
   </div>
 </div>
