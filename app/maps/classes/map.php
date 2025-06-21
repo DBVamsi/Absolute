@@ -4,26 +4,32 @@
     public $Map_Data;
     public $Objects;
     public $Output;
-    public $Player;
+    public $Player; // Instance of Player class
     public $Map_File;
 
     public function __construct
     (
+      Player $player, // Inject Player instance
       string $Map_ID = null
     )
     {
+      $this->Player = $player;
+
       if ( !empty($_SESSION['EvoChroniclesRPG']['Maps']['Cache']) )
         unset($_SESSION['EvoChroniclesRPG']['Maps']['Cache']);
 
       if ( empty($Map_ID) )
       {
-        $this->Player = Player::GetInstance();
+        // $this->Player is already set via constructor
         $Map_ID = $this->Player->GetMap();
 
         $this->Map_File = "../maps/{$Map_ID}.json";
         if ( !file_exists($this->Map_File) )
         {
+          // This call might be tricky if Player::SetPosition() itself tries to instantiate Map without Player
+          // However, Player::SetPosition has been updated to call new Map($this, ...)
           $this->Player->SetPosition();
+          $Map_ID = $this->Player->GetMap(); // Re-get Map_ID if SetPosition changed it (e.g. to a default)
           $this->Map_File = "../maps/{$Map_ID}.json";
         }
       }

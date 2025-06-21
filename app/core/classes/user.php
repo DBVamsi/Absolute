@@ -1,15 +1,15 @@
 <?php
 	class User
 	{
-		public $PDO;
+		private $pdo;
+		private static $VALID_CURRENCY_COLUMNS = ['Money', 'Abso_Coins']; // Whitelist
 
 		/**
 		 * Construct and initialize the class.
 		 */
-		public function __construct()
+		public function __construct(PDO $pdo)
 		{
-			global $PDO;
-			$this->PDO = $PDO;
+			$this->pdo = $pdo;
 		}
 
 		/**
@@ -17,8 +17,6 @@
 		 */
 		public function FetchUserData($User_Query)
 		{
-			global $PDO;
-
 			if ( !$User_Query )
 				return false;
 
@@ -26,7 +24,7 @@
 
 			try
 			{
-				$Fetch_User = $PDO->prepare("
+				$Fetch_User = $this->pdo->prepare("
 					SELECT *
 					FROM `users`
 					  INNER JOIN `user_currency`
@@ -38,7 +36,7 @@
 				$Fetch_User->setFetchMode(PDO::FETCH_ASSOC);
 				$User = $Fetch_User->fetch();
 
-        $Check_User_Ban = $PDO->prepare("
+        $Check_User_Ban = $this->pdo->prepare("
           SELECT *
           FROM `user_bans`
           WHERE `User_ID` = ?
@@ -53,6 +51,7 @@
 			catch ( PDOException $e )
 			{
 				HandleError($e);
+        return false; // Added to prevent further processing on error
 			}
 
 			if ( !$User )
@@ -62,8 +61,9 @@
 			if ( !$Roster )
 				$Roster = null;
 
-			if ( !isset($User) || !$User )
-				return false;
+			// This check is redundant as it's covered by !$User above.
+			// if ( !isset($User) || !$User )
+			//	return false;
 
 			if ( isset($User_Ban['RPG_Ban']) && $User_Ban['RPG_Ban'] )
 				$Banned_RPG = true;
@@ -139,14 +139,12 @@
 			int $User_ID
 		)
 		{
-			global $PDO;
-
 			if ( !$User_ID )
 				return false;
 
 			try
 			{
-				$User_Check = $PDO->prepare("SELECT `ID` FROM `users` WHERE `ID` = ? LIMIT 1");
+				$User_Check = $this->pdo->prepare("SELECT `ID` FROM `users` WHERE `ID` = ? LIMIT 1");
 				$User_Check->execute([ $User_ID ]);
 				$User_Check->setFetchMode(PDO::FETCH_ASSOC);
 				$User = $User_Check->fetch();
@@ -154,6 +152,7 @@
 			catch ( PDOException $e )
 			{
 				HandleError($e);
+        return false; // Added
 			}
 
 			if ( !$User )
@@ -161,7 +160,7 @@
 
 			try
 			{
-				$Fetch_Roster = $PDO->prepare("SELECT * FROM `pokemon` WHERE `Owner_Current` = ? AND `Location` = 'Roster' ORDER BY `Slot` ASC LIMIT 6");
+				$Fetch_Roster = $this->pdo->prepare("SELECT * FROM `pokemon` WHERE `Owner_Current` = ? AND `Location` = 'Roster' ORDER BY `Slot` ASC LIMIT 6");
 				$Fetch_Roster->execute([ $User_ID ]);
 				$Fetch_Roster->setFetchMode(PDO::FETCH_ASSOC);
 				$Roster = $Fetch_Roster->fetchAll();
@@ -169,6 +168,7 @@
 			catch ( PDOException $e )
 			{
 				HandleError($e);
+        return false; // Added
 			}
 
 			return $Roster;
@@ -182,24 +182,37 @@
 		 */
 		public function RemoveCurrency(int $User_ID, string $Currency, int $Amount)
 		{
-			global $PDO;
-
-			if ( !$User_ID || !$Currency || !$Amount )
+			if ( !$User_ID || !$Currency || $Amount <= 0 ) // Amount should be positive
 				return false;
+
+      // Check against whitelist
+      if ( !in_array($Currency, self::$VALID_CURRENCY_COLUMNS, true) ) {
+        // Optionally log this attempt or throw an exception
+        error_log("Attempt to update invalid currency column: {$Currency} for User ID: {$User_ID}");
+        return false;
+      }
 
 			try
 			{
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-				$Select_Query = $PDO->prepare("UPDATE `user_currency` SET `{$Currency}` = `{$Currency}` - ? WHERE `ID` = ? LIMIT 1");
-				$Select_Query->execute([ $Amount, $User_ID ]);
+				// Interpolation is now safe due to whitelisting
+				$Update_Query = $this->pdo->prepare("UPDATE `user_currency` SET `{$Currency}` = `{$Currency}` - ? WHERE `ID` = ? AND `{$Currency}` >= ? LIMIT 1");
+				$Update_Query->execute([ $Amount, $User_ID, $Amount ]); // Ensure user has enough
 
-        $PDO->commit();
+        if ($Update_Query->rowCount() == 0) {
+            $this->pdo->rollBack();
+            // Optionally log this: User might not have enough currency
+            return false;
+        }
+
+        $this->pdo->commit();
 			}
 			catch ( PDOException $e )
 			{
-        $PDO->rollBack();
+        $this->pdo->rollBack();
 				HandleError($e);
+        return false; // Added
 			}
 
 			return true;
@@ -210,7 +223,7 @@
 		 */
 		public function FetchMasteries($User_ID)
 		{
-
+      // Placeholder
 		}
 
 		/**
@@ -218,11 +231,9 @@
 		 */
 		public function DisplayUserRank($UserID, $Font_Size = 18)
 		{
-			global $PDO;
-
 			try
 			{
-				$Fetch_Rank = $PDO->prepare("SELECT `Rank` FROM `users` WHERE `id` = ? LIMIT 1");
+				$Fetch_Rank = $this->pdo->prepare("SELECT `Rank` FROM `users` WHERE `id` = ? LIMIT 1");
 				$Fetch_Rank->execute([$UserID]);
 				$Fetch_Rank->setFetchMode(PDO::FETCH_ASSOC);
 				$Rank = $Fetch_Rank->fetch();
@@ -230,41 +241,37 @@
 			catch ( PDOException $e )
 			{
 				HandleError($e);
+        return "Error"; // Added
 			}
+
+      if (!$Rank) return "Unknown Rank"; // Added
 
 			switch($Rank['Rank'])
 			{
 				case 'Administrator':
 					return "<div class='administrator' style='font-size: {$Font_Size}px'>Administrator</div>";
-					break;
 				case 'Bot':
 					return "<div class='bot' style='font-size: {$Font_Size}px'>Bot</div>";
-					break;
 				case 'Developer':
 					return "<div class='developer' style='font-size: {$Font_Size}px'>Developer</div>";
-					break;
 				case 'Super Moderator':
 					return "<div class='super_mod' style='font-size: {$Font_Size}px'>Super Moderator</div>";
-					break;
 				case 'Moderator':
 					return "<div class='moderator' style='font-size: {$Font_Size}px'>Moderator</div>";
-					break;
 				case 'Chat Moderator':
 					return "<div class='chat_mod' style='font-size: {$Font_Size}px'>Chat Moderator</div>";
-					break;
 				case 'Member':
 					return "<div class='member' style='font-size: {$Font_Size}px'>Member</div>";
-					break;
+        default:
+          return "<div class='member' style='font-size: {$Font_Size}px'>Member</div>"; // Default case
 			}
 		}
 
 		public function DisplayUserName($UserID, $Clan_Tag = false, $Display_ID = false, $Link = false)
 		{
-			global $PDO;
-
 			try
 			{
-				$Fetch_User = $PDO->prepare("SELECT `id`, `Username`, `Rank` FROM `users` WHERE `id` = ? LIMIT 1");
+				$Fetch_User = $this->pdo->prepare("SELECT `id`, `Username`, `Rank` FROM `users` WHERE `id` = ? LIMIT 1");
 				$Fetch_User->execute([ $UserID ]);
 				$Fetch_User->setFetchMode(PDO::FETCH_ASSOC);
 				$User = $Fetch_User->fetch();
@@ -272,7 +279,10 @@
 			catch ( PDOException $e )
 			{
 				HandleError($e);
+        return "Error"; // Added
 			}
+
+      if (!$User) return "Unknown User"; // Added
 
 			if ( $Display_ID )
 			{
@@ -301,28 +311,19 @@
 			{
 				case 'Administrator':
 					return "{$Apply_Link_1}<span class='administrator'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				case 'Bot':
 					return "{$Apply_Link_1}<span class='bot'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				case 'Developer':
 					return "{$Apply_Link_1}<span class='developer'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				case 'Super Moderator':
 					return "{$Apply_Link_1}<span class='super_mod'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				case 'Moderator':
 					return "{$Apply_Link_1}<span class='moderator'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				case 'Chat Moderator':
 					return "{$Apply_Link_1}<span class='chat_mod'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				case 'Member':
-					return "{$Apply_Link_1}<span class='member'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 				default:
 					return "{$Apply_Link_1}<span class='member'>{$User['Username']}{$Append_ID}</span>{$Apply_Link_2}";
-					break;
 			}
 		}
 
@@ -333,21 +334,19 @@
      * @param {string} $Stat_Name
      * @param {int} $Stat_Value
      */
-    public static function UpdateStat
+    public function UpdateStat
     (
       int $User_ID,
       string $Stat_Name,
       int $Stat_Value
     )
     {
-      global $PDO;
-
-      if ( empty($Stat_Value) || $Stat_Value == 0 )
+      if ( empty($Stat_Value) || $Stat_Value == 0 ) // Allow negative values for stat reduction if ever needed
         return false;
 
       try
       {
-        $Stat = $PDO->prepare("
+        $Stat = $this->pdo->prepare("
           INSERT INTO `user_stats` (`User_ID`, `Stat_Name`, `Stat_Value`)
           VALUES (?, ?, ?)
           ON DUPLICATE KEY UPDATE `Stat_Value` = `Stat_Value` + VALUES(`Stat_Value`)
@@ -357,6 +356,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       return true;

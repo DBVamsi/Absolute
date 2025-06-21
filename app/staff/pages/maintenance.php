@@ -13,7 +13,7 @@
     exit;
   }
 
-  require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/maintenance.php';
+  // require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/maintenance.php'; // Removed
 ?>
 
 <div style='display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;'>
@@ -30,7 +30,7 @@
   <div id='Maintenance_AJAX'></div>
   <div id='Maintenance_Table'>
     <?php
-      echo ShowMaintenanceTable();
+      echo $Maintenance_Service->ShowMaintenanceTable(); // Updated
     ?>
   </div>
 </div>

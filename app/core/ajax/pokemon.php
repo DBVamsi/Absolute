@@ -6,7 +6,7 @@
 	else
 		$Poke_ID = 0;
 
-	$Pokemon = GetPokemonData($Poke_ID);
+	$Pokemon = $Pokemon_Service->GetPokemonData($Poke_ID);
 
 	if ( !$Pokemon )
 	{
@@ -15,16 +15,16 @@
 		return;
 	}
 
-	$Owner_Current_Username = $User_Class->DisplayUsername($Pokemon['Owner_Current'], true, false, true);
-	$Owner_Original_Username = $User_Class->DisplayUsername($Pokemon['Owner_Original'], true, false, true);
+	$Owner_Current_Username = $User_Class->DisplayUserName($Pokemon['Owner_Current'], true, false, true);
+	$Owner_Original_Username = $User_Class->DisplayUserName($Pokemon['Owner_Original'], true, false, true);
 
 	if ( !$Pokemon['Item'] )
 		$Pokemon['Item'] = "None";
 
-	$Move_1 = GetMoveData($Pokemon['Move_1']);
-  $Move_2 = GetMoveData($Pokemon['Move_2']);
-  $Move_3 = GetMoveData($Pokemon['Move_3']);
-  $Move_4 = GetMoveData($Pokemon['Move_4']);
+	$Move_1 = $Pokemon_Service->GetMoveData($Pokemon['Move_1']);
+  $Move_2 = $Pokemon_Service->GetMoveData($Pokemon['Move_2']);
+  $Move_3 = $Pokemon_Service->GetMoveData($Pokemon['Move_3']);
+  $Move_4 = $Pokemon_Service->GetMoveData($Pokemon['Move_4']);
 ?>
 
 <!DOCTYPE html>

@@ -38,7 +38,7 @@
     isset($_POST['Position'])
   )
   {
-    $User_ID = Purify($_POST['User_ID']);
+    $User_ID = (int)($_POST['User_ID']);
     $Position = Purify($_POST['Position']);
 
     if ( in_array($Position, ['Member', 'Moderator']) )

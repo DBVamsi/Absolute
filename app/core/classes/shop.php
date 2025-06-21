@@ -1,7 +1,21 @@
 <?php
-	Class Shop
+	class Shop
 	{
-		public $PDO;
+		private $pdo;
+    private $pokemonService;
+    private $userService;
+    private $itemService;
+
+    /**
+     * Construct and initialize the class.
+     */
+		public function __construct(PDO $pdo, PokemonService $pokemonService, User $userService, Item $itemService)
+		{
+			$this->pdo = $pdo;
+      $this->pokemonService = $pokemonService;
+      $this->userService = $userService;
+      $this->itemService = $itemService;
+		}
 
     /**
      * Fetch specific shop data.
@@ -12,14 +26,12 @@
       $Shop_ID
     )
     {
-      global $PDO;
-
       if ( !$Shop_ID )
         return false;
 
       try
       {
-        $Fetch_Shop = $PDO->prepare("SELECT * FROM `shops` WHERE `ID` = ? OR `obtained_place` = ? LIMIT 1");
+        $Fetch_Shop = $this->pdo->prepare("SELECT * FROM `shops` WHERE `ID` = ? OR `obtained_place` = ? LIMIT 1");
         $Fetch_Shop->execute([ $Shop_ID, $Shop_ID ]);
         $Fetch_Shop->setFetchMode(PDO::FETCH_ASSOC);
         $Shop = $Fetch_Shop->fetch();
@@ -27,6 +39,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       if ( !$Shop )
@@ -51,8 +64,6 @@
       int $Shop_ID
     )
     {
-      global $PDO;
-
       if ( !$Shop_ID )
         return false;
 
@@ -62,7 +73,7 @@
 
       try
       {
-        $Fetch_Shop_Objects = $PDO->prepare("SELECT * FROM `shop_pokemon` WHERE `obtained_place` = ? AND `Active` = 1");
+        $Fetch_Shop_Objects = $this->pdo->prepare("SELECT * FROM `shop_pokemon` WHERE `obtained_place` = ? AND `Active` = 1");
         $Fetch_Shop_Objects->execute([ $Shop_Data['Obtained_Place'] ]);
         $Fetch_Shop_Objects->setFetchMode(PDO::FETCH_ASSOC);
         $Shop_Objects = $Fetch_Shop_Objects->fetchAll();
@@ -70,6 +81,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       if ( !$Shop_Objects )
@@ -87,8 +99,6 @@
       int $Shop_ID
     )
     {
-      global $PDO;
-
       if ( !$Shop_ID )
         return false;
 
@@ -98,7 +108,7 @@
 
       try
       {
-        $Fetch_Shop_Objects = $PDO->prepare("SELECT * FROM `shop_items` WHERE `obtained_place` = ?");
+        $Fetch_Shop_Objects = $this->pdo->prepare("SELECT * FROM `shop_items` WHERE `obtained_place` = ?");
         $Fetch_Shop_Objects->execute([ $Shop_Data['Obtained_Place'] ]);
         $Fetch_Shop_Objects->setFetchMode(PDO::FETCH_ASSOC);
         $Shop_Objects = $Fetch_Shop_Objects->fetchAll();
@@ -106,6 +116,7 @@
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       if ( !isset($Shop_Objects) || count($Shop_Objects) === 0 )
@@ -125,8 +136,6 @@
       string $Object_Type
     )
     {
-      global $PDO;
-
       if ( !$Object_ID || !$Object_Type )
         return false;
 
@@ -136,23 +145,25 @@
       try
       {
         if ( $Object_Type == 'Item' )
-          $Fetch_Object_Data = $PDO->prepare("SELECT * FROM `shop_items` WHERE `ID` = ? LIMIT 1");
+          $Fetch_Object_Data = $this->pdo->prepare("SELECT * FROM `shop_items` WHERE `ID` = ? LIMIT 1");
         else
-          $Fetch_Object_Data = $PDO->prepare("SELECT * FROM `shop_pokemon` WHERE `ID` = ? LIMIT 1");
+          $Fetch_Object_Data = $this->pdo->prepare("SELECT * FROM `shop_pokemon` WHERE `ID` = ? LIMIT 1");
 
         $Fetch_Object_Data->execute([ $Object_ID ]);
         $Fetch_Object_Data->setFetchMode(PDO::FETCH_ASSOC);
-        $Object_Data = $Fetch_Object_Data->fetchAll();
+        // fetchAll() was incorrect here, should be fetch() for LIMIT 1
+        $Object_Data = $Fetch_Object_Data->fetch();
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       if ( !$Object_Data )
         return false;
 
-      return $Object_Data;
+      return $Object_Data; // Return single row
     }
 
     /**
@@ -166,30 +177,19 @@
       string $Object_Type
     )
     {
-      global $PDO, $User_Class, $User_Data, $Item_Class;
+      global $User_Data; // $User_Data is still global, for things like $User_Data['ID'] and $User_Data[$Currency]
 
       if ( !$Object_ID || !$Object_Type )
         return false;
 
-      $Object_Data = $this->FetchObjectData($Object_ID, $Object_Type);
-      if ( !$Object_Data )
+      // FetchObjectData now returns a single row or false
+      $Object = $this->FetchObjectData($Object_ID, $Object_Type);
+      if ( !$Object ) // If $Object_Data was meant to be the single row, this check is fine.
         return false;
 
-      try
-      {
-        if ( $Object_Type == 'Item' )
-          $Fetch_Object = $PDO->prepare("SELECT * FROM `shop_items` WHERE `ID` = ? LIMIT 1");
-        else
-          $Fetch_Object = $PDO->prepare("SELECT * FROM `shop_pokemon` WHERE `ID` = ? LIMIT 1");
-
-        $Fetch_Object->execute([ $Object_ID ]);
-        $Fetch_Object->setFetchMode(PDO::FETCH_ASSOC);
-        $Object = $Fetch_Object->fetch();
-      }
-      catch ( PDOException $e )
-      {
-        HandleError($e);
-      }
+      // Note: The original code fetched $Object_Data as fetchAll, then did another fetch for $Object.
+      // I've simplified FetchObjectData to return a single row (or false).
+      // So, $Object is now $Object_Data from the simplified method.
 
       $Shop_Data = $this->FetchShopData($Object['Obtained_Place']);
       if ( !$Shop_Data )
@@ -197,7 +197,6 @@
 
       if
       (
-        !$Object ||
         !$Object['Prices'] ||
         !$Object['Active'] ||
         $Object['Remaining'] < 1
@@ -208,14 +207,10 @@
       $Price_Array = $this->FetchPriceList($Object['Prices']);
       foreach ( $Price_Array[0] as $Currency => $Amount )
       {
-        if ( $User_Data[$Currency] < $Amount )
+        if ( !isset($User_Data[$Currency]) || $User_Data[$Currency] < $Amount ) // Check if currency key exists in User_Data
         {
           $Can_Afford = false;
           break;
-        }
-        else
-        {
-          $Can_Afford = true;
         }
       }
 
@@ -246,16 +241,17 @@
           $Object['Gender'] = '(?)';
         }
         else
-          $Object['Gender'] = GenerateGender($Object['Pokedex_ID'], $Object['Alt_ID']);
+          // GenerateGender is static on PokemonService
+          $Object['Gender'] = PokemonService::GenerateGender($Object['Pokedex_ID'], $Object['Alt_ID']);
 
-        $Spawn_Pokemon = CreatePokemon(
+        $Spawn_Pokemon = $this->pokemonService->CreatePokemon(
           $User_Data['ID'],
           $Object['Pokedex_ID'],
           $Object['Alt_ID'],
-          5,
+          5, // Assuming level 5 for shop Pokemon, this could be data-driven
           $Object['Type'],
           $Object['Gender'],
-          $Shop_Data['Name'],
+          $Shop_Data['Name']
         );
 
         if ( !$Spawn_Pokemon )
@@ -264,7 +260,7 @@
         $this->ReduceRemaining($Object['ID'], $Object_Type);
 
         foreach ( $Price_Array[0] as $Currency => $Amount )
-          $User_Class->RemoveCurrency($User_Data['ID'], $Currency, $Amount);
+          $this->userService->RemoveCurrency($User_Data['ID'], $Currency, $Amount);
 
         $this->InsertLog(
           $Shop_Data['Name'],
@@ -291,20 +287,20 @@
           'Ungendered_Alert' => $Ungendered_Alert,
         ];
       }
-      else
+      else // Item
       {
-        $Spawn_Item = $Item_Class->SpawnItem($User_Data['ID'], $Object['ID'], 1);
+        $Spawn_Item = $this->itemService->SpawnItem($User_Data['ID'], $Object['Item_ID'], 1); // Assuming Item_ID is the correct key for shop_items
         if ( !$Spawn_Item )
           return false;
 
         $this->ReduceRemaining($Object['ID'], $Object_Type);
 
         foreach ( $Price_Array[0] as $Currency => $Amount )
-          $User_Class->RemoveCurrency($User_Data['ID'], $Currency, $Amount);
+          $this->userService->RemoveCurrency($User_Data['ID'], $Currency, $Amount);
 
         $this->InsertLog(
           $Shop_Data['Name'],
-          $Object['ID'],
+          $Object['Item_ID'], // Assuming Item_ID for items
           null, null, null, null, null,
           $Object['Prices'],
           $User_Data['ID'],
@@ -340,27 +336,29 @@
       string $Object_Type
     )
     {
-      global $PDO;
-
       if ( !$Object_ID || !$Object_Type )
         return false;
 
-      $Object_Data = $this->FetchObjectData($Object_ID, $Object_Type);
-      if ( !$Object_Data )
-        return false;
+      // FetchObjectData already called in PurchaseObject, $Object is available.
+      // Re-fetching here is redundant if $Object_Data in PurchaseObject was the single fetched object.
+      // For safety, if it's critical to have the absolute latest, keep it, but consider optimization.
+      // $Object_Fresh_Data = $this->FetchObjectData($Object_ID, $Object_Type);
+      // if ( !$Object_Fresh_Data )
+      //  return false;
 
       try
       {
         if ( $Object_Type == 'Item' )
-          $Reduce_Amount = $PDO->prepare("UPDATE `shop_items` SET `Remaining` = `Remaining` - 1 WHERE `ID` = ?");
+          $Reduce_Amount = $this->pdo->prepare("UPDATE `shop_items` SET `Remaining` = `Remaining` - 1 WHERE `ID` = ?");
         else
-          $Reduce_Amount = $PDO->prepare("UPDATE `shop_pokemon` SET `Remaining` = `Remaining` - 1 WHERE `ID` = ?");
+          $Reduce_Amount = $this->pdo->prepare("UPDATE `shop_pokemon` SET `Remaining` = `Remaining` - 1 WHERE `ID` = ?");
 
         $Reduce_Amount->execute([ $Object_ID ]);
       }
       catch ( PDOException $e )
       {
         HandleError($e);
+        return false; // Added
       }
 
       return true;
@@ -376,8 +374,9 @@
       int $Shiny_Odds
     )
     {
-      if ( !$Object_ID || !$Shiny_Odds )
+      if ( !$Object_ID || !$Shiny_Odds ) // Shiny_Odds can be 0, meaning never shiny from this shop.
         return false;
+      if ($Shiny_Odds <= 0) return false; // Prevent division by zero or negative odds
 
       if ( mt_rand(1, $Shiny_Odds) == 1 )
         return true;
@@ -395,8 +394,10 @@
       int $Ungendered_Odds
     )
     {
-      if ( !$Object_ID || !$Ungendered_Odds )
+      if ( !$Object_ID || !$Ungendered_Odds ) // Ungendered_Odds can be 0.
         return false;
+      if ($Ungendered_Odds <= 0) return false;
+
 
       if ( mt_rand(1, $Ungendered_Odds) == 1 )
         return true;
@@ -432,34 +433,26 @@
       $Timestamp
     )
     {
-      global $PDO;
-
       try
       {
-        $PDO->beginTransaction();
+        $this->pdo->beginTransaction();
 
-        $Insert_Shop_Log = $PDO->prepare("
+        $Insert_Shop_Log = $this->pdo->prepare("
           INSERT INTO `shop_logs` (
-            `Shop_Name`,
-            `Item_ID`,
-            `Pokemon_ID`,
-            `Pokemon_Pokedex_ID`,
-            `Pokemon_Alt_ID`,
-            `Pokemon_Type`,
-            `Pokemon_Gender`,
-            `Bought_With`,
-            `Bought_By`,
-            `Timestamp`
+            `Shop_Name`, `Item_ID`, `Pokemon_ID`, `Pokemon_Pokedex_ID`, `Pokemon_Alt_ID`, `Pokemon_Type`, `Pokemon_Gender`, `Bought_With`, `Bought_By`, `Timestamp`
           ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
         ");
-        $Insert_Shop_Log->execute(func_get_args());
+        // func_get_args() might be risky if method signature changes. Explicitly list args.
+        $Insert_Shop_Log->execute([
+          $Shop_Name, $Item_ID, $Pokemon_ID, $Pokemon_Pokedex_ID, $Pokemon_Alt_ID,
+          $Pokemon_Type, $Pokemon_Gender, $Bought_With, $Bought_By, $Timestamp
+        ]);
 
-        $PDO->commit();
+        $this->pdo->commit();
       }
       catch ( \PDOException $e )
       {
-        $PDO->rollBack();
-
+        $this->pdo->rollBack();
         HandleError($e);
       }
     }

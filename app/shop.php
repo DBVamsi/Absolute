@@ -1,6 +1,6 @@
 <?php
 	require_once 'core/required/layout_top.php';
-	require_once 'core/classes/shop.php';
+	// require_once 'core/classes/shop.php'; // Shop_Class is already instantiated in session.php
 
 	if ( isset($_GET['Shop']) )
 		$Shop_ID = Purify($_GET['Shop']);
@@ -71,7 +71,7 @@
             switch ( $Shop_Catalog )
             {
               case 'Pokemon':
-                $Object_Data = GetPokedexData($Shop_Object['Pokedex_ID'], $Shop_Object['Alt_ID'], $Shop_Object['Type']);
+                $Object_Data = $Pokemon_Service->GetPokedexData($Shop_Object['Pokedex_ID'], $Shop_Object['Alt_ID'], $Shop_Object['Type']);
                 break;
 
               case 'Items':
