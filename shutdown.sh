@@ -10,7 +10,7 @@ shutdown_discord_bot() {
   fi
   source "$env_file"
 
-  echo "[INFO] Shutting down Absolute's Discord bot."
+  echo "[INFO] Shutting down Evo-Chronicles RPG's Discord bot."
 
   # ???
 
@@ -23,7 +23,7 @@ shutdown_containers() {
 }
 
 # Main script contents.
-echo "[INFO] Shutting down all Absolute containers."
+echo "[INFO] Shutting down all Evo-Chronicles RPG containers."
 
 shutdown_discord_bot
 

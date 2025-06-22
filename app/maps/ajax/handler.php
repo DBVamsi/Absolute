@@ -23,7 +23,15 @@
    */
   if ( isset($_GET['Request']) )
   {
-    $Request = Purify($_GET['Request']); // String, Purify is okay for now
+    $allowed_requests = ['Load', 'Stats'];
+    $Request_Input = $_GET['Request'] ?? '';
+
+    if (!in_array($Request_Input, $allowed_requests, true)) {
+      header('Content-Type: application/json');
+      echo json_encode(['error' => 'Invalid request type.']);
+      exit;
+    }
+    $Request = $Request_Input;
 
     switch ( $Request )
     {
@@ -75,7 +83,15 @@
    */
   if ( isset($_POST['Action']) )
   {
-    $Action = Purify($_POST['Action']); // String, Purify is okay for now
+    $allowed_actions = ['Interact', 'Movement', 'Warp', 'Catch', 'Release', 'Run'];
+    $Action_Input = $_POST['Action'] ?? '';
+
+    if (!in_array($Action_Input, $allowed_actions, true)) {
+      header('Content-Type: application/json');
+      echo json_encode(['error' => 'Invalid action specified.']);
+      exit;
+    }
+    $Action = $Action_Input;
 
     switch ( $Action )
     {

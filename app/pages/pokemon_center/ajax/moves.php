@@ -3,8 +3,12 @@
   require_once $_SERVER['DOCUMENT_ROOT'] . '/pages/pokemon_center/functions/roster.php';
   require_once $_SERVER['DOCUMENT_ROOT'] . '/pages/pokemon_center/functions/moves.php';
 
-  if ( !empty($_GET['Action']) && in_array($_GET['Action'], ['Get_Roster', 'Select_Move', 'Update_Move']) )
-    $Action = Purify($_GET['Action']);
+  $Action_Input = $_GET['Action'] ?? '';
+  $allowed_actions = ['Get_Roster', 'Select_Move', 'Update_Move'];
+  $Action = null;
+
+  if ( !empty($Action_Input) && in_array($Action_Input, $allowed_actions, true) )
+    $Action = $Action_Input; // Whitelisted, Purify not needed
 
   if ( empty($Action) )
   {
@@ -18,17 +22,24 @@
 
   $Pokemon_ID = null;
   if ( !empty($_GET['Pokemon_ID']) )
-    $Pokemon_ID = Purify($_GET['Pokemon_ID']);
+    $Pokemon_ID = (int)$_GET['Pokemon_ID'];
 
   $Move_Slot = 1;
-  if ( !empty($_GET['Move_Slot']) && in_array($Move_Slot, [1, 2, 3, 4]) )
-    $Move_Slot = Purify($_GET['Move_Slot']);
+  // Ensure Move_Slot is validated from GET param before use, then cast to int
+  if ( !empty($_GET['Move_Slot']) ) {
+      $temp_move_slot = (int)$_GET['Move_Slot'];
+      if (in_array($temp_move_slot, [1, 2, 3, 4], true)) {
+          $Move_Slot = $temp_move_slot;
+      }
+      // else $Move_Slot remains 1 (default) or handle error
+  }
+
 
   $Move_ID = null;
   if ( !empty($_GET['Move_ID']) )
-    $Move_ID = Purify($_GET['Move_ID']);
+    $Move_ID = (int)$_GET['Move_ID'];
 
-  if ( !empty($Move_ID) )
+  if ( $Move_ID !== null && $Move_ID != 0 ) // Allow 0 for unsetting a move, but check existence if not 0
   {
     try
     {

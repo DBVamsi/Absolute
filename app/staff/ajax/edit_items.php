@@ -4,7 +4,7 @@
 
   $Item_ID = null;
   if ( !empty($_GET['Item_ID']) )
-    $Item_ID = Purify($_GET['Item_ID']);
+    $Item_ID = (int)$_GET['Item_ID'];
 
   try
   {
@@ -48,51 +48,51 @@
 
   $Item_Description = null;
   if ( !empty($_GET['Item_Description']) )
-    $Item_Description = Purify($_GET['Item_Description']);
+    $Item_Description = Purify($_GET['Item_Description']); // Text content, Purify is fine
 
   $Can_Take_Item = null;
   if ( !empty($_GET['Can_Take_Item']) )
-    $Can_Take_Item = Purify($_GET['Item_Description']);
+    $Can_Take_Item = Purify($_GET['Can_Take_Item']); // Corrected GET key, Purify for now (could be (int) if 0/1)
 
   $Natural_Gift_Power = null;
   if ( !empty($_GET['Natural_Gift_Power']) )
-    $Natural_Gift_Power = Purify($_GET['Natural_Gift_Power']);
+    $Natural_Gift_Power = (int)$_GET['Natural_Gift_Power'];
 
   $Natural_Gift_Type = null;
   if ( !empty($_GET['Natural_Gift_Type']) )
-    $Natural_Gift_Type = Purify($_GET['Natural_Gift_Type']);
+    $Natural_Gift_Type = Purify($_GET['Natural_Gift_Type']); // String (Pokemon Type), Purify is fine
 
   $Fling_Power = null;
   if ( !empty($_GET['Fling_Power']) )
-    $Fling_Power = Purify($_GET['Fling_Power']);
+    $Fling_Power = (int)$_GET['Fling_Power'];
 
   $Attack_Boost = null;
   if ( !empty($_GET['Attack_Boost']) )
-    $Attack_Boost = Purify($_GET['Attack_Boost']);
+    $Attack_Boost = (int)$_GET['Attack_Boost'];
 
   $Defense_Boost = null;
   if ( !empty($_GET['Defense_Boost']) )
-    $Defense_Boost = Purify($_GET['Defense_Boost']);
+    $Defense_Boost = (int)$_GET['Defense_Boost'];
 
   $Sp_Attack_Boost = null;
   if ( !empty($_GET['Sp_Attack_Boost']) )
-    $Sp_Attack_Boost = Purify($_GET['Sp_Attack_Boost']);
+    $Sp_Attack_Boost = (int)$_GET['Sp_Attack_Boost'];
 
   $Sp_Defense_Boost = null;
   if ( !empty($_GET['Sp_Defense_Boost']) )
-    $Sp_Defense_Boost = Purify($_GET['Sp_Defense_Boost']);
+    $Sp_Defense_Boost = (int)$_GET['Sp_Defense_Boost'];
 
   $Speed_Boost = null;
   if ( !empty($_GET['Speed_Boost']) )
-    $Speed_Boost = Purify($_GET['Speed_Boost']);
+    $Speed_Boost = (int)$_GET['Speed_Boost'];
 
   $Accuracy_Boost = null;
   if ( !empty($_GET['Accuracy_Boost']) )
-    $Accuracy_Boost = Purify($_GET['Accuracy_Boost']);
+    $Accuracy_Boost = (int)$_GET['Accuracy_Boost'];
 
   $Evasion_Boost = null;
   if ( !empty($_GET['Evasion_Boost']) )
-    $Evasion_Boost = Purify($_GET['Evasion_Boost']);
+    $Evasion_Boost = (int)$_GET['Evasion_Boost'];
 
   switch ( $Action )
   {

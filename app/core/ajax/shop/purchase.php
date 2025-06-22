@@ -88,7 +88,7 @@
             <tbody>
               <tr>
                 <td colspan='2' rowspan='3'>
-                  <img src='{$Purchase_Object['Sprite']}' />
+                  <img src='<?= htmlspecialchars($Purchase_Object['Sprite'], ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>' />
                 </td>
                 <td></td>
                 <td style='width: 39px;'>
@@ -135,7 +135,7 @@
               </tr>
               <tr>
                 <td colspan='10' style='padding: 5px;'>
-                  <b>You have successfully purchased a(n) {$Purchase_Object['Display_Name']}.</b>
+                  <b>You have successfully purchased a(n) <?= htmlspecialchars($Purchase_Object['Display_Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') ?>.</b>
                 </td>
               </tr>
             <tbody>
@@ -148,9 +148,10 @@
         // $Item_Class is available via session.php
         $Item_Info = $Item_Class->FetchItemData($Object_ID);
         $Item_Name_Display = $Item_Info ? $Item_Info['Name'] : 'item';
+        $Item_Name_Display_Escaped = htmlspecialchars($Item_Name_Display, ENT_QUOTES | ENT_HTML5, 'UTF-8');
          echo "
           <div class='success'>
-            You have successfully purchased a(n) {$Item_Name_Display}.
+            You have successfully purchased a(n) {$Item_Name_Display_Escaped}.
           </div>
         ";
       }

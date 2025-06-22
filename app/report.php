@@ -15,8 +15,8 @@
     <?php
       if ( !empty($_POST['Reported_User_ID']) && !empty($_POST['Reported_Reason']) )
       {
-        $Reported_User_ID = Purify($_POST['Reported_User_ID']);
-        $Reported_Reason = Purify($_POST['Reported_Reason']);
+        $Reported_User_ID = isset($_POST['Reported_User_ID']) ? (int)$_POST['Reported_User_ID'] : 0;
+        $Reported_Reason = Purify($_POST['Reported_Reason']); // Text content, Purify is fine
 
         AddNewReport($Reported_User_ID, $Reported_Reason);
 
@@ -39,7 +39,7 @@
               <input
                 type='number'
                 name='Reported_User_ID'
-                value='<?= !empty($_GET['Reporting_User']) ? Purify($_GET['Reporting_User']) : ''; ?>'
+                value='<?= !empty($_GET['Reporting_User']) ? htmlspecialchars((string)((int)($_GET['Reporting_User'] ?? 0)), ENT_QUOTES | ENT_HTML5, 'UTF-8') : ''; ?>'
                 onkeydown='return event.keyCode !== 69'
               />
             </td>

@@ -10,7 +10,14 @@
   $Sub_Category = 1;
   if ( isset($_GET['Sub_Category']) )
   {
-    $Sub_Category = Purify($_GET['Sub_Category']);
+    if ($Category == 'Pokemon')
+    {
+      $Sub_Category = (int)$_GET['Sub_Category'];
+    }
+    else // For 'Items', or any other category, treat as string
+    {
+      $Sub_Category = Purify($_GET['Sub_Category']);
+    }
   }
 
   $Sprite_Dialogue = '';

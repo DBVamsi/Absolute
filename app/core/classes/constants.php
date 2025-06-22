@@ -1,22 +1,25 @@
 <?php
-	/**
-	 * A class that's use is to setup constant values that are used across the RPG.
-	 */
+/**
+ * A class that defines various constant values and configurations used across the RPG.
+ * These are typically game settings, item properties, or other static data arrays.
+ */
 	Class Constants
 	{
-		public $PDO;
+		// public $PDO; // PDO was not used in this class, removing dependency.
 
 		/**
-		 * Construct and initialize the class.
+		 * Constructor for the Constants class.
+     * Currently does not require any dependencies.
 		 */
 		public function __construct()
 		{
-			global $PDO;
-			$this->PDO = $PDO;
+			// global $PDO; // Removed, PDO is not used by this class.
+			// $this->PDO = $PDO;
 		}
 
 		/**
-		 * Currencies
+		 * @var array Defines the types of currencies available in the game.
+     * Each currency has properties like Value (column name), Name (display name), Icon path, and Tradeable status.
 		 */
 		public $Currency = [
 			'Money'				=> [ 

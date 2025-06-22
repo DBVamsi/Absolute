@@ -12,7 +12,7 @@
 		return;
 	}
 
-	$Trade_ID = Purify($_POST['Trade_ID']);
+	$Trade_ID = isset($_POST['Trade_ID']) ? (int)$_POST['Trade_ID'] : 0;
 
 	try
 	{

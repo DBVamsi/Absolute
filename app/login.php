@@ -1,118 +1,66 @@
 <?php
-	require_once 'core/required/session.php';
-  require_once 'core/functions/login.php';
+    require_once __DIR__ . '/core/required/layout_top.php';
 
-  /**
-   * The user is already logged in; don't process login logic.
-   */
-  if
-  (
-    session_status() === PHP_SESSION_ACTIVE &&
-    !empty($_SESSION['EvoChroniclesRPG'])
-  )
-  {
-    echo "
-			<div class='panel content'>
-				<div class='head'>Login</div>
-				<div class='body' style='padding: 5px;'>
-					You're already logged in to Evo-Chronicles RPG.
-				</div>
-			</div>
-		";
-
-		require_once 'core/required/layout_bottom.php';
-		exit;
-  }
-
-  /**
-   * The user is attempting to log in.
-   */
-	if ( !empty($_POST['username']) && !empty($_POST['password']) )
-	{
-		$Username = Purify($_POST['username']);
-		$Password = Purify($_POST['password']);
-		$IP = $_SERVER["REMOTE_ADDR"];
-
-    $Login_Attempt = false;
-
-    $User_Info = CheckUserExistence($Username);
-
-    if ( empty($User_Info) )
-    {
-      TrackLoginAttempt($Username, $IP, false);
-
-      $Login_Message = [
-        'Type' => 'error',
-        'Text' => "An account with that ID or Username does not exist."
-      ];
+    // Redirect if already logged in
+    if (isset($_SESSION['EvoChroniclesRPG']['User_Data'])) { // Check User_Data specifically for login status
+        header("Location: " . DOMAIN_ROOT . "/index.php");
+        exit;
     }
 
-    if ( empty($Login_Message) )
-    {
-      $Password_Check = CheckUserPasswordMatch($User_Info['ID'], $Password);
+    // Initialize view variables
+    $view_feedback_message = ['type' => '', 'text' => ''];
+    $view_submitted_username = '';
 
-      if ( !$Password_Check )
-      {
-        TrackLoginAttempt($User_Info['ID'], $IP, false);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_action'])) {
+        $username_input = $_POST['Username'] ?? '';
+        $password_input = $_POST['Password'] ?? ''; // Raw password
 
-        $Login_Message = [
-          'Type' => 'error',
-          'Text' => "You have entered an incorrect password."
-        ];
-      }
+        // For re-populating form (username only)
+        $view_submitted_username = htmlspecialchars(Purify($username_input), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if (empty($username_input) || empty($password_input)) {
+            $view_feedback_message = ['type' => 'error', 'text' => 'Username and password are required.'];
+        } else {
+            $sanitized_username = Purify($username_input); // Purify for lookup, though AuthenticateUser might re-sanitize if needed
+
+            if (isset($User_Class)) {
+                $auth_result = $User_Class->AuthenticateUser($sanitized_username, $password_input);
+
+                if ($auth_result['success']) {
+                    // Set up the session
+                    $_SESSION['EvoChroniclesRPG']['Logged_In_As'] = $auth_result['user_id'];
+                    $_SESSION['EvoChroniclesRPG']['Playtime_Start'] = time(); // Initialize playtime start
+
+                    session_regenerate_id(true); // Regenerate session ID to prevent session fixation
+
+                    // Update Last_Login timestamp
+                    $User_Class->UpdateLastLogin($auth_result['user_id']);
+
+                    // Fetch full user data for the session (already have user_id and username from auth_result)
+                    // It's good to store comprehensive user data in session after login.
+                    $User_Data = $User_Class->FetchUserData($auth_result['user_id']);
+                    $_SESSION['EvoChroniclesRPG']['User_Data'] = $User_Data;
+
+                    // Redirect to homepage
+                    header("Location: " . DOMAIN_ROOT . "/index.php");
+                    exit;
+                } else {
+                    $view_feedback_message = ['type' => 'error', 'text' => $auth_result['message']];
+                }
+            } else {
+                $view_feedback_message = ['type' => 'error', 'text' => 'Authentication service is currently unavailable.'];
+            }
+        }
     }
 
-    if ( empty($Login_Message) )
-    {
-      TrackLoginAttempt($User_Info['ID'], $IP, true);
+    // Path to the view file
+    $view_file_path = __DIR__ . '/views/auth/login_view.php';
 
-      $_SESSION['EvoChroniclesRPG']['Logged_In_As'] = $User_Info['ID'];
-      header('Location: /news.php');
-      exit;
+    if (file_exists($view_file_path)) {
+        require_once $view_file_path;
+    } else {
+        echo "<div class='panel content'><div class='head'>Error</div><div class='body' style='padding: 5px;'>Login view is currently unavailable.</div></div>";
     }
-	}
 
-  require_once 'core/required/layout_top.php';
+    require_once __DIR__ . '/core/required/layout_bottom.php';
 ?>
-
-<div class='panel content' style='margin: 5px; width: calc(100% - 14px);'>
-	<div class='head'>Login</div>
-	<div class='body' style='padding-bottom: 5px;'>
-		<div class='nav'>
-			<div><a href='index.php' style='display: block;'>Home</a></div>
-			<div><a href='login.php' style='display: block;'>Login</a></div>
-			<div><a href='register.php' style='display: block;'>Register</a></div>
-			<div><a href='discord.php' style='display: block;'>Discord</a></div>
-		</div>
-
-		<div class='description' style='background: #334364; margin-bottom: 5px; width: 70%;'>
-			Fill in the form below if you wish to login to Evo-Chronicles RPG.
-		</div>
-
-    <?php
-      if ( !empty($Login_Message) )
-      {
-        echo "
-          <div class='{$Login_Message['Type']}'>
-            {$Login_Message['Text']}
-          </div>
-        ";
-      }
-    ?>
-
-		<div class='description' style='background: #334364; width: 50%;'>
-			<form method="POST">
-				<b>Username/ID</b><br />
-				<input autofocus type='text' name='username' placeholder='Username/ID' style='text-align: center;' />
-				<br />
-				<b>Password</b><br />
-				<input type='password' name='password' placeholder='Password' style='text-align: center;' />
-				<br /><br />
-				<input type='submit' name='action' value='Login to Evo-Chronicles RPG' style='margin-left: -3px; width: 180px;' />
-			</form>
-		</div>
-	</div>
-</div>
-
-<?php
-	require_once 'core/required/layout_bottom.php';

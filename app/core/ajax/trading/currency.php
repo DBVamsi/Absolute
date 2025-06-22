@@ -15,7 +15,7 @@
     return;
   }
 
-	$User_ID = Purify($_POST['id']);
+	$User_ID = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 	$User = $User_Class->FetchUserData($User_ID);
 
 	foreach ( $Constants->Currency as $Key => $Value )

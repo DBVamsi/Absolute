@@ -1,8 +1,17 @@
 <?php
+/**
+ * Service class for logging staff actions.
+ */
   class StaffLogService
   {
+    /** @var PDO */
     private $pdo;
 
+    /**
+     * Constructor for StaffLogService.
+     *
+     * @param PDO $pdo The PDO database connection object.
+     */
     public function __construct(PDO $pdo)
     {
       $this->pdo = $pdo;
@@ -12,12 +21,12 @@
      * Logs a staff action to the database.
      *
      * @param int $staffUserId The ID of the staff member performing the action.
-     * @param string $action A description of the action taken.
-     * @param int|null $targetUserId The ID of the user affected by the action, if any.
-     * @param string|null $notes Additional notes or reasons for the action.
-     * @return bool True on success, false on failure.
+     * @param string $action A description of the action taken (e.g., 'Banned User', 'Deleted Report'). Max 255 chars based on typical schema.
+     * @param int|null $targetUserId The ID of the user or object affected by the action, if any.
+     * @param string|null $notes Additional notes, reasons, or details for the action.
+     * @return bool True on successful logging, false on failure.
      */
-    public function log(int $staffUserId, string $action, ?int $targetUserId = null, ?string $notes = null)
+    public function log(int $staffUserId, string $action, ?int $targetUserId = null, ?string $notes = null): bool
     {
       if ( empty($staffUserId) || empty($action) )
       {

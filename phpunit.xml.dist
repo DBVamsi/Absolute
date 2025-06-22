@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         verbose="true">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">./tests/unit</directory>
+        </testsuite>
+        <!-- You can add more testsuites here, e.g., for Integration or Functional tests -->
+        <!--
+        <testsuite name="Integration">
+            <directory suffix="Test.php">./tests/integration</directory>
+        </testsuite>
+        -->
+    </testsuites>
+
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">./app/core/classes</directory>
+            <directory suffix=".php">./app/staff/classes</directory>
+            <directory suffix=".php">./app/maps/classes</directory>
+            <!-- Add other app directories with classes you want to measure coverage for -->
+            <!-- Example: <directory suffix=".php">./app/battles/classes</directory> -->
+        </include>
+        <exclude>
+            <directory suffix=".php">./app/views</directory>
+            <directory suffix=".php">./tests</directory>
+            <!-- Exclude vendor directory if you had one -->
+            <!-- <directory suffix=".php">./vendor</directory> -->
+        </exclude>
+        <report>
+            <clover outputFile="coverage.xml"/>
+            <html outputDirectory="html-coverage"/>
+            <text outputFile="php://stdout" showUncoveredFiles="false" showOnlySummary="true"/>
+        </report>
+    </coverage>
+
+    <logging>
+        <!-- <log type="junit" target="logfile.xml"/> -->
+    </logging>
+
+    <php>
+        <!-- You can define PHP constants, environment variables, etc., for your tests here -->
+        <!-- Example: <env name="APP_ENV" value="testing"/> -->
+        <!-- Example: <ini name="memory_limit" value="256M"/> -->
+    </php>
+</phpunit>

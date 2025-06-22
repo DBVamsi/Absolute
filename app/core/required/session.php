@@ -10,14 +10,19 @@
   // Deal with the $_SERVER const.
   if ( isset($_SERVER['HTTP_HOST']) && session_status() !== PHP_SESSION_ACTIVE )
   {
-    if ( $_SERVER['HTTP_HOST'] == "localhost" )
-    {
-      session_set_cookie_params(0, '/', 'localhost');
-    }
-    else
-    {
-      session_set_cookie_params(0, '/', 'absoluterpg.com');
-    }
+    $domain = ($_SERVER['HTTP_HOST'] != 'localhost') ? $_SERVER['HTTP_HOST'] : false; // Set domain for live site, false for localhost
+    $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+
+    // Set secure session cookie parameters
+    // PHP 7.3+ allows an options array
+    session_set_cookie_params([
+        'lifetime' => 0, // 0 means "until the browser is closed"
+        'path' => '/',
+        'domain' => $domain,
+        'secure' => $is_https, // Set to true if HTTPS is enforced site-wide
+        'httponly' => true,    // Prevent JavaScript access to the session cookie
+        'samesite' => 'Lax'    // CSRF protection: Lax or Strict. Lax is a good default.
+    ]);
   }
 
   // No cache.
@@ -78,7 +83,7 @@
   $Pokemon_Service = new PokemonService($pdo_instance);
   $StaffLog_Service = new StaffLogService($pdo_instance);
 
-  $Clan_Class = new Clan($pdo_instance);
+  $Clan_Class = new Clan($pdo_instance, $User_Class); // Added $User_Class
   $Item_Class = new Item($pdo_instance, $Pokemon_Service, $User_Class);
   $Shop_Class = new Shop($pdo_instance, $Pokemon_Service, $User_Class, $Item_Class);
   $Notification_Class = new Notification($pdo_instance);

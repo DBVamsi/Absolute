@@ -2,8 +2,12 @@
   require_once $_SERVER['DOCUMENT_ROOT'] . '/core/required/session.php';
   require_once $_SERVER['DOCUMENT_ROOT'] . '/pages/pokemon_center/functions/release.php';
 
-  if ( !empty($_GET['Action']) && in_array($_GET['Action'], ['Get_Releasable_Pokemon', 'Process_Selected_Pokemon', 'Release_Pokemon']) )
-    $Action = Purify($_GET['Action']);
+  $Action_Input = $_GET['Action'] ?? '';
+  $allowed_actions = ['Get_Releasable_Pokemon', 'Process_Selected_Pokemon', 'Release_Pokemon'];
+  $Action = null;
+
+  if ( !empty($Action_Input) && in_array($Action_Input, $allowed_actions, true) )
+    $Action = $Action_Input; // Whitelisted, Purify not needed
 
   if ( empty($Action) )
   {
@@ -17,7 +21,7 @@
 
   $Selected_Pokemon = null;
   if ( !empty($_GET['Selected_Pokemon']) )
-    $Selected_Pokemon = Purify($_GET['Selected_Pokemon']);
+    $Selected_Pokemon = $_GET['Selected_Pokemon']; // JSON string, do not Purify
 
   switch ( $Action )
   {

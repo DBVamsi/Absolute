@@ -51,55 +51,55 @@
 
   $Staff_Perm = null;
   if ( !empty($_GET['Staff_Perm']) )
-    $Staff_Perm = Purify($_GET['Staff_Perm']);
+    $Staff_Perm = (int)$_GET['Staff_Perm'];
 
   $Graphics_Perm = null;
   if ( !empty($_GET['Graphics_Perm']) )
-      $Graphics_Perm = Purify($_GET['Graphics_Perm']);
+      $Graphics_Perm = (int)$_GET['Graphics_Perm'];
 
   $Logs_Perm = null;
   if ( !empty($_GET['Logs_Perm']) )
-      $Logs_Perm = Purify($_GET['Logs_Perm']);
+      $Logs_Perm = (int)$_GET['Logs_Perm'];
 
   $Reports_Perm = null;
   if ( !empty($_GET['Reports_Perm']) )
-      $Reports_Perm = Purify($_GET['Reports_Perm']);
+      $Reports_Perm = (int)$_GET['Reports_Perm'];
 
   $Bans_Perm = null;
   if ( !empty($_GET['Bans_Perm']) )
-      $Bans_Perm = Purify($_GET['Bans_Perm']);
+      $Bans_Perm = (int)$_GET['Bans_Perm'];
 
   $User_Management_Perm = null;
   if ( !empty($_GET['User_Management_Perm']) )
-      $User_Management_Perm = Purify($_GET['User_Management_Perm']);
+      $User_Management_Perm = (int)$_GET['User_Management_Perm'];
 
   $Pokemon_Management_Perm = null;
   if ( !empty($_GET['Pokemon_Management_Perm']) )
-      $Pokemon_Management_Perm = Purify($_GET['Pokemon_Management_Perm']);
+      $Pokemon_Management_Perm = (int)$_GET['Pokemon_Management_Perm'];
 
   $Transer_Pokemon_Perm = null;
   if ( !empty($_GET['Transer_Pokemon_Perm']) )
-      $Transer_Pokemon_Perm = Purify($_GET['Transer_Pokemon_Perm']);
+      $Transer_Pokemon_Perm = (int)$_GET['Transer_Pokemon_Perm'];
 
   $Maintenance_Perm = null;
   if ( !empty($_GET['Maintenance_Perm']) )
-      $Maintenance_Perm = Purify($_GET['Maintenance_Perm']);
+      $Maintenance_Perm = (int)$_GET['Maintenance_Perm'];
 
   $Set_Obtainables_Perm = null;
   if ( !empty($_GET['Set_Obtainables_Perm']) )
-      $Set_Obtainables_Perm = Purify($_GET['Set_Obtainables_Perm']);
+      $Set_Obtainables_Perm = (int)$_GET['Set_Obtainables_Perm'];
 
   $Database_Perm = null;
   if ( !empty($_GET['Database_Perm']) )
-      $Database_Perm = Purify($_GET['Database_Perm']);
+      $Database_Perm = (int)$_GET['Database_Perm'];
 
   $Spawn_Perm = null;
   if ( !empty($_GET['Spawn_Perm']) )
-      $Spawn_Perm = Purify($_GET['Spawn_Perm']);
+      $Spawn_Perm = (int)$_GET['Spawn_Perm'];
 
   $Staff_Management_Perm = null;
   if ( !empty($_GET['Staff_Management_Perm']) )
-      $Staff_Management_Perm = Purify($_GET['Staff_Management_Perm']);
+      $Staff_Management_Perm = (int)$_GET['Staff_Management_Perm'];
 
   switch ( $Action )
   {

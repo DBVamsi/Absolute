@@ -26,6 +26,7 @@
 		}
 
 		$Poke_ID = substr($Poke_ID, 3, -1);
+		$Poke_ID = (int)$Poke_ID; // Cast to integer
 		$Poke_Data = GetPokemonData($Poke_ID);
 
 		if ( $Poke_Data )
@@ -61,8 +62,9 @@
 	 */
 	else if ( isset($_POST['Type']) )
 	{
-		$Page = isset($_POST['Page']) ? Purify($_POST['Page']) : 1;
-		$Type = isset($_POST['Type']) ? Purify($_POST['Type']) : 'Normal';
+		$Page = isset($_POST['Page']) ? (int)$_POST['Page'] : 1;
+		if ($Page < 1) $Page = 1;
+		$Type = isset($_POST['Type']) ? Purify($_POST['Type']) : 'Normal'; // String, Purify is fine
 		$User_ID = $User_Data['ID'];
 
 		$Display_Limit = 50;

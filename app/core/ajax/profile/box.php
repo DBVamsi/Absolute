@@ -3,9 +3,10 @@
 
   if ( isset($_GET['User_ID']) )
   {
-    $User_ID = Purify($_GET['User_ID']);
+    $User_ID = isset($_GET['User_ID']) ? (int)$_GET['User_ID'] : 0;
 
-    $Current_Page = isset($_GET['Page']) ? Purify($_GET['Page']) : 1;
+    $Current_Page = isset($_GET['Page']) ? (int)$_GET['Page'] : 1;
+    if ($Current_Page < 1) $Current_Page = 1;
     $Filter_Type = (isset($_GET['filter_type'])) ? Purify($_GET['filter_type']) : '0';
     $Filter_Gender = (isset($_GET['filter_gender'])) ? Purify($_GET['filter_gender']) : '0';
     $Filter_Dir = (isset($_GET['filter_search_order'])) ? Purify($_GET['filter_search_order']) : 'ASC';

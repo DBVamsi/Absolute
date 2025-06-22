@@ -26,7 +26,7 @@ generate_log_files() {
 
 # Function to generate development certificates using Certbot
 generate_dev_certs() {
-  if [ ! -f "certbot/conf/live/absoluterpg.com/fullchain.pem" ]; then
+  if [ ! -f "certbot/conf/live/yourdomain.com/fullchain.pem" ]; then # Updated domain
     echo "[INFO] Dev certs do not exist. Running certbot script."
     bash certbot/generate.sh
 
@@ -78,7 +78,7 @@ start_docker_containers() {
 # Function to execute SQL migrations inside the MySQL Docker container
 execute_sql_migrations() {
   echo "[INFO] Executing SQL migrations."
-  migrations=$(docker exec -it absolute-mysql bash -c "cd /data/application && ./migrate.sh")
+  migrations=$(docker exec -it ecrpg-mysql bash -c "cd /data/application && ./migrate.sh") # Updated service name
 
   if [[ "$migrations" != *"[SUCCESS] All migrations executed successfully."* ]]; then
     if [ "$verbose_migrations" = true ]; then

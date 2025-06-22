@@ -4,7 +4,7 @@
 
   $Pokedex_ID = null;
   if ( !empty($_GET['Pokedex_ID']) )
-    $Pokedex_ID = Purify($_GET['Pokedex_ID']);
+    $Pokedex_ID = (int)$_GET['Pokedex_ID'];
 
   try
   {
@@ -64,87 +64,87 @@
 
   $Base_HP = null;
   if ( !empty($_GET['Base_HP']) )
-    $Base_HP = Purify($_GET['Base_HP']);
+    $Base_HP = (int)$_GET['Base_HP'];
 
   $Base_Attack = null;
   if ( !empty($_GET['Base_Attack']) )
-    $Base_Attack = Purify($_GET['Base_Attack']);
+    $Base_Attack = (int)$_GET['Base_Attack'];
 
   $Base_Defense = null;
   if ( !empty($_GET['Base_Defense']) )
-    $Base_Defense = Purify($_GET['Base_Defense']);
+    $Base_Defense = (int)$_GET['Base_Defense'];
 
   $Base_Sp_Attack = null;
   if ( !empty($_GET['Base_Sp_Attack']) )
-    $Base_Sp_Attack = Purify($_GET['Base_Sp_Attack']);
+    $Base_Sp_Attack = (int)$_GET['Base_Sp_Attack'];
 
   $Base_Sp_Defense = null;
   if ( !empty($_GET['Base_Sp_Defense']) )
-    $Base_Sp_Defense = Purify($_GET['Base_Sp_Defense']);
+    $Base_Sp_Defense = (int)$_GET['Base_Sp_Defense'];
 
   $Base_Speed = null;
   if ( !empty($_GET['Base_Speed']) )
-    $Base_Speed = Purify($_GET['Base_Speed']);
+    $Base_Speed = (int)$_GET['Base_Speed'];
 
   $HP_EV = null;
   if ( !empty($_GET['HP_EV']) )
-    $HP_EV = Purify($_GET['HP_EV']);
+    $HP_EV = (int)$_GET['HP_EV'];
 
   $Attack_EV = null;
   if ( !empty($_GET['Attack_EV']) )
-    $Attack_EV = Purify($_GET['Attack_EV']);
+    $Attack_EV = (int)$_GET['Attack_EV'];
 
   $Defense_EV = null;
   if ( !empty($_GET['Defense_EV']) )
-    $Defense_EV = Purify($_GET['Defense_EV']);
+    $Defense_EV = (int)$_GET['Defense_EV'];
 
   $Sp_Attack_EV = null;
   if ( !empty($_GET['Sp_Attack_EV']) )
-    $Sp_Attack_EV = Purify($_GET['Sp_Attack_EV']);
+    $Sp_Attack_EV = (int)$_GET['Sp_Attack_EV'];
 
   $Sp_Defense_EV = null;
   if ( !empty($_GET['Sp_Defense_EV']) )
-    $Sp_Defense_EV = Purify($_GET['Sp_Defense_EV']);
+    $Sp_Defense_EV = (int)$_GET['Sp_Defense_EV'];
 
   $Speed_EV = null;
   if ( !empty($_GET['Speed_EV']) )
-    $Speed_EV = Purify($_GET['Speed_EV']);
+    $Speed_EV = (int)$_GET['Speed_EV'];
 
   $Female_Odds = null;
   if ( !empty($_GET['Female_Odds']) )
-    $Female_Odds = Purify($_GET['Female_Odds']);
+    $Female_Odds = (float)$_GET['Female_Odds'];
 
   $Male_Odds = null;
   if ( !empty($_GET['Male_Odds']) )
-    $Male_Odds = Purify($_GET['Male_Odds']);
+    $Male_Odds = (float)$_GET['Male_Odds'];
 
   $Genderless_Odds = null;
   if ( !empty($_GET['Genderless_Odds']) )
-    $Genderless_Odds = Purify($_GET['Genderless_Odds']);
+    $Genderless_Odds = (float)$_GET['Genderless_Odds'];
 
   $Height = null;
   if ( !empty($_GET['Height']) )
-    $Height = Purify($_GET['Height']);
+    $Height = (float)$_GET['Height'];
 
   $Weight = null;
   if ( !empty($_GET['Weight']) )
-    $Weight = Purify($_GET['Weight']);
+    $Weight = (float)$_GET['Weight'];
 
   $Exp_Yield = null;
   if ( !empty($_GET['Exp_Yield']) )
-    $Exp_Yield = Purify($_GET['Exp_Yield']);
+    $Exp_Yield = (int)$_GET['Exp_Yield'];
 
   $Is_Baby = null;
   if ( !empty($_GET['Is_Baby']) )
-    $Is_Baby = Purify($_GET['Is_Baby']);
+    $Is_Baby = (int)$_GET['Is_Baby'];
 
   $Is_Mythical = null;
   if ( !empty($_GET['Is_Mythical']) )
-    $Is_Mythical = Purify($_GET['Is_Mythical']);
+    $Is_Mythical = (int)$_GET['Is_Mythical'];
 
   $Is_Legendary = null;
   if ( !empty($_GET['Is_Legendary']) )
-    $Is_Legendary = Purify($_GET['Is_Legendary']);
+    $Is_Legendary = (int)$_GET['Is_Legendary'];
 
   switch ( $Action )
   {

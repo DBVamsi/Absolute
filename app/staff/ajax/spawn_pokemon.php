@@ -5,7 +5,7 @@
 
   $Pokedex_ID = null;
   if ( !empty($_GET['Pokedex_ID']) )
-    $Pokedex_ID = Purify($_GET['Pokedex_ID']);
+    $Pokedex_ID = (int)$_GET['Pokedex_ID'];
 
   try
   {
@@ -53,79 +53,79 @@
 
   $Creation_Location = null;
   if ( !empty($_GET['Creation_Location']) )
-    $Creation_Location = Purify($_GET['Creation_Location']);
+    $Creation_Location = Purify($_GET['Creation_Location']); // String, Purify fine
 
   $Level = null;
   if ( !empty($_GET['Level']) )
-    $Level = Purify($_GET['Level']);
+    $Level = (int)$_GET['Level'];
 
   $Frozen = null;
   if ( !empty($_GET['Frozen']) )
-    $Frozen = Purify($_GET['Frozen']);
+    $Frozen = (int)$_GET['Frozen'];
 
   $Gender = null;
   if ( !empty($_GET['Gender']) )
-    $Gender = Purify($_GET['Gender']);
+    $Gender = Purify($_GET['Gender']); // String, Purify fine
 
   $Type = null;
   if ( !empty($_GET['Type']) )
-    $Type = Purify($_GET['Type']);
+    $Type = Purify($_GET['Type']); // String, Purify fine
 
   $Nature = null;
   if ( !empty($_GET['Nature']) )
-    $Nature = Purify($_GET['Nature']);
+    $Nature = Purify($_GET['Nature']); // String, Purify fine
 
   $Ability = null;
   if ( !empty($_GET['Ability']) )
-    $Ability = Purify($_GET['Ability']);
+    $Ability = (int)$_GET['Ability'];
 
   $IV_HP = null;
   if ( !empty($_GET['IV_HP']) )
-    $IV_HP = Purify($_GET['IV_HP']);
+    $IV_HP = (int)$_GET['IV_HP'];
 
   $IV_Attack = null;
   if ( !empty($_GET['IV_Attack']) )
-    $IV_Attack = Purify($_GET['IV_Attack']);
+    $IV_Attack = (int)$_GET['IV_Attack'];
 
   $IV_Defense = null;
   if ( !empty($_GET['IV_Defense']) )
-    $IV_Defense = Purify($_GET['IV_Defense']);
+    $IV_Defense = (int)$_GET['IV_Defense'];
 
   $IV_Sp_Attack = null;
   if ( !empty($_GET['IV_Sp_Attack']) )
-    $IV_Sp_Attack = Purify($_GET['IV_Sp_Attack']);
+    $IV_Sp_Attack = (int)$_GET['IV_Sp_Attack'];
 
   $IV_Sp_Defense = null;
   if ( !empty($_GET['IV_Sp_Defense']) )
-    $IV_Sp_Defense = Purify($_GET['IV_Sp_Defense']);
+    $IV_Sp_Defense = (int)$_GET['IV_Sp_Defense'];
 
   $IV_Speed = null;
   if ( !empty($_GET['IV_Speed']) )
-    $IV_Speed = Purify($_GET['IV_Speed']);
+    $IV_Speed = (int)$_GET['IV_Speed'];
 
   $EV_HP = null;
   if ( !empty($_GET['EV_HP']) )
-    $EV_HP = Purify($_GET['EV_HP']);
+    $EV_HP = (int)$_GET['EV_HP'];
 
   $EV_Attack = null;
   if ( !empty($_GET['EV_Attack']) )
-    $EV_Attack = Purify($_GET['EV_Attack']);
+    $EV_Attack = (int)$_GET['EV_Attack'];
 
   $EV_Defense = null;
   if ( !empty($_GET['EV_Defense']) )
-    $EV_Defense = Purify($_GET['EV_Defense']);
+    $EV_Defense = (int)$_GET['EV_Defense'];
 
   $EV_Sp_Attack = null;
   if ( !empty($_GET['EV_Sp_Attack']) )
-    $EV_Sp_Attack = Purify($_GET['EV_Sp_Attack']);
+    $EV_Sp_Attack = (int)$_GET['EV_Sp_Attack'];
 
   $EV_Sp_Defense = null;
   if ( !empty($_GET['EV_Sp_Defense']) )
-    $EV_Sp_Defense = Purify($_GET['EV_Sp_Defense']);
+    $EV_Sp_Defense = (int)$_GET['EV_Sp_Defense'];
 
   $EV_Speed = null;
   if ( !empty($_GET['EV_Speed']) )
-    $EV_Speed = Purify($_GET['EV_Speed']);
+    $EV_Speed = (int)$_GET['EV_Speed'];
 
 
   switch ( $Action )

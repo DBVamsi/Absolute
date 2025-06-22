@@ -15,8 +15,13 @@
     exit;
   }
 
-  if ( !empty($_GET['User_Action']) && in_array($_GET['User_Action'], ['Show', 'Update']) )
-    $User_Action = Purify($_GET['User_Action']);
+  $User_Action_Input = $_GET['User_Action'] ?? '';
+  $allowed_user_actions = ['Show', 'Update'];
+
+  if ( !empty($User_Action_Input) && in_array($User_Action_Input, $allowed_user_actions, true) )
+    $User_Action = $User_Action_Input; // Whitelisted, Purify not needed
+  else
+    $User_Action = null; // Or handle error explicitly
 
   if ( empty($User_Action) )
   {
@@ -30,11 +35,11 @@
 
   $New_User_Avatar = null;
   if ( !empty($_GET['New_User_Avatar']) )
-    $New_User_Avatar = Purify($_GET['New_User_Avatar']);
+    $New_User_Avatar = Purify($_GET['New_User_Avatar']); // Avatar path/URL, Purify is fine
 
   $New_User_Password = null;
   if ( !empty($_GET['New_User_Password']) )
-    $New_User_Password = Purify($_GET['New_User_Password']);
+    $New_User_Password = $_GET['New_User_Password']; // Raw password, do not Purify
 
   try
   {

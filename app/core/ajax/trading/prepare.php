@@ -12,16 +12,16 @@
 		return;
 	}
 
-	$Recipient_ID = Purify($_POST['ID']);
-	$Recipient = $User_Class->FetchUserData($Recipient_ID);
+	$Recipient_ID = isset($_POST['ID']) ? (int)$_POST['ID'] : 0;
+	$Recipient = $User_Class->FetchUserData($Recipient_ID); // FetchUserData will handle if ID is 0 or invalid
 
-	if ( $Recipient_ID == 0 || !$Recipient )
+	if ( !$Recipient ) // Check if recipient data was successfully fetched
 	{
-		echo "<div class='error'>The user that you're attempting to trade with does not exist.</div>";
+		echo "<div class='error'>The user that you're attempting to trade with does not exist or is invalid.</div>";
 
 		return;
 	}
-	else if ( $User_Data['ID'] !== $Recipient['ID'] )
+	else if ( $User_Data['ID'] == $Recipient['ID'] ) // Corrected logic: prevent trading with self
 	{
 		echo "<div class='error'>You may not trade with yourself.</div>";
 
