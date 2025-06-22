@@ -1,21 +1,21 @@
 <div align="center">
-  <img src="./app/images/Assets/banner.png" title="Pokemon Absolute Logo" alt="Pokemon Absolute Logo" />
-  <h1 align="center">Pok&eacute;mon Absolute</h1>
+  <img src="./app/images/Assets/banner.png" title="Pokémon Evo-Chronicles RPG Logo" alt="Pokémon Evo-Chronicles RPG Logo" />
+  <h1 align="center">Pok&eacute;mon Evo-Chronicles RPG</h1>
 
-  **Pok&eacute;mon Absolute** is an online text-based Pok&eacute;mon RPG, comprised of numerous features adapted from the official Pok&eacute;mon games, as well as entirely new features that enhance the playing experience of Pok&eacute;mon.
+  **Pok&eacute;mon Evo-Chronicles RPG** is an online text-based Pok&eacute;mon RPG, comprised of numerous features adapted from the official Pok&eacute;mon games, as well as entirely new features that enhance the playing experience of Pok&eacute;mon.
 
-  <img alt="Github Issues" src="https://img.shields.io/github/issues/Toxocious/Absolute?style=for-the-badge&logo=appveyor" />
-  <img alt="Github Forks" src="https://img.shields.io/github/forks/Toxocious/Absolute?style=for-the-badge&logo=appveyor" />
-  <img alt="Github Stars" src="https://img.shields.io/github/stars/Toxocious/Absolute?style=for-the-badge&logo=appveyor" />
+  <img alt="Github Issues" src="https://img.shields.io/github/issues/YourUsername/EvoChroniclesRPG?style=for-the-badge&logo=appveyor" />
+  <img alt="Github Forks" src="https://img.shields.io/github/forks/YourUsername/EvoChroniclesRPG?style=for-the-badge&logo=appveyor" />
+  <img alt="Github Stars" src="https://img.shields.io/github/stars/YourUsername/EvoChroniclesRPG?style=for-the-badge&logo=appveyor" />
   <br />
 
-  <img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Toxocious/Absolute?style=for-the-badge">
-    <a href="https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FToxocious%2FAbsolute">
-    <img src="https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FToxocious%2FAbsolute&label=Views&countColor=%234a618f&labelStyle=upper" />
+  <img alt="GitHub contributors" src="https://img.shields.io/github/contributors/YourUsername/EvoChroniclesRPG?style=for-the-badge">
+    <a href="https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FYourUsername%2FEvoChroniclesRPG">
+    <img src="https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FYourUsername%2FEvoChroniclesRPG&label=Views&countColor=%234a618f&labelStyle=upper" />
   </a>
   <br />
 
-  <img alt="License" src="https://img.shields.io/github/license/Toxocious/Absolute?style=for-the-badge&logo=appveyor" />
+  <img alt="License" src="https://img.shields.io/github/license/YourUsername/EvoChroniclesRPG?style=for-the-badge&logo=appveyor" />
 
   Come join our comfy community over on Discord!
 
@@ -46,6 +46,8 @@
 
 
 # About The Project
+The codebase has undergone significant refactoring to modernize its structure, improve security, and enhance maintainability using a service-oriented approach and dependency injection.
+
 ## Tech Stack
 - PHP
 - Node.js
@@ -59,7 +61,7 @@
 - xDebug
 
 ## Features
-Absolute has been developed from the ground up with love, and thus comes with a wide variety of features, such as:
+Evo-Chronicles RPG has been developed from the ground up with love, and thus comes with a wide variety of features, such as:
 
 - Dedicated Battles
 - Open World Mapping
@@ -68,7 +70,7 @@ Absolute has been developed from the ground up with love, and thus comes with a 
 - Live Trading
 - Staff Panel
 
-You may read about Absolute's features in further detail in our [FEATURES.md](docs/FEATURES.md) documentation.
+You may read about Evo-Chronicles RPG's features in further detail in our [FEATURES.md](docs/FEATURES.md) documentation.
 
 
 
@@ -82,10 +84,10 @@ This project spins up [Docker](https://www.docker.com/get-started/) containers t
 ## Installation
 Clone the repository to the necessary directory.
 
-If you would like to also install Absolute's chat system and discord bot, clone this repository recursively. If you do not want them, do not clone it recursively.
+If you would like to also install Evo-Chronicles RPG's chat system and discord bot, clone this repository recursively. If you do not want them, do not clone it recursively.
 
 ```bash
-git clone --recursive https://github.com/Toxocious/Absolute.git
+git clone --recursive https://github.com/YourUsername/EvoChroniclesRPG.git
 ```
 
 ## Project Setup
@@ -125,17 +127,17 @@ Once you have successfully built all Docker containers, you can access PHPMyAdmi
 > The leading / is necessary, otherwise the page will fail to load necessary resources.
 
 ## Chat Setup
-The source code used for Absolute's chat system can be found [HERE](https://github.com/Toxocious/Absolute-Chat) and includes a separate, in-depth README with set-up documentation.
+The source code used for Evo-Chronicles RPG's chat system can be found at `YourUsername/EvoChroniclesRPG-Chat` (link to be updated) and includes a separate, in-depth README with set-up documentation.
 
-Absolute's docker configuration includes the necessary dockerfile to automatically build and run the RPG's chat server for you.
+Evo-Chronicles RPG's docker configuration includes the necessary dockerfile to automatically build and run the RPG's chat server for you.
 
 ## Discord Bot Setup
-The source code used for Absolute's Discord Bot can be found [HERE](https://github.com/Toxocious/Absolute-Discord-Bot) and includes a separate, in-depth README with documentation regarding included features.
+The source code used for Evo-Chronicles RPG's Discord Bot can be found at `YourUsername/EvoChroniclesRPG-Discord-Bot` (link to be updated) and includes a separate, in-depth README with documentation regarding included features.
 
-Absolute's docker configuration includes the necessary dockerfile to automatically build and run the Discord bot for you.
+Evo-Chronicles RPG's docker configuration includes the necessary dockerfile to automatically build and run the Discord bot for you.
 
 ## CI/CD Pipeline Setup
-Absolute uses a continue integration and deployment pipeline to automatically sync the repository ``main`` branch with the remote server.
+Evo-Chronicles RPG uses a continue integration and deployment pipeline to automatically sync the repository ``main`` branch with the remote server.
 
 We used to use a CI/CD pipeline through Gitlab to synchronize our code with a remote server, but since moving to Github and using Docker for development, we do not currently have a working Github CI/CD workflow configuration.
 
@@ -149,19 +151,26 @@ We used to use a CI/CD pipeline through Gitlab to synchronize our code with a re
 > ### This is deprecated, and both the root user and absolute user will set their passwords based on the supplied values in the .env file.
 > ### This section will remain in the case where you have downgraded your mariadb container image.
 
-When you first setup Absolute, the root MySQL password is an empty string. It is highly suggested that you change this to a very secure password with the following CLI command, where `'NEW_PASSWORD'` is the password that you want the root MySQL account to have.
+When you first setup Evo-Chronicles RPG, the root MySQL password is an empty string. It is highly suggested that you change this to a very secure password with the following CLI command, where `'NEW_PASSWORD'` is the password that you want the root MySQL account to have.
 
 ```sh
-docker exec -it absolute-mysql bash
+docker exec -it ecrpg-mysql bash
 mariadb -u root -p'' password 'NEW_PASSWORD'
 ```
 
 Do make sure to update the `MYSQL_ROOT_PASSWORD` `.env` value to reflect the new password that you've set.
 
 
+# Testing
+This project uses PHPUnit for automated testing. Version 9.x is recommended.
+- Tests are located in the `tests/unit` directory.
+- To run tests, execute `php phpunit.phar` from the project root (assuming `phpunit.phar` is present in the root).
+- The test execution is configured by `phpunit.xml.dist`.
+- See `tests/bootstrap.php` for test environment setup.
+
 
 # Contributing
-If you're interested in contributing to Absolute, please check out [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
+If you're interested in contributing to Evo-Chronicles RPG, please check out [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
 
 
 

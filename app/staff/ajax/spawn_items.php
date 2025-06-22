@@ -4,7 +4,7 @@
 
   $Item_ID = null;
   if ( !empty($_GET['Item_ID']) )
-    $Item_ID = Purify($_GET['Item_ID']);
+    $Item_ID = (int)$_GET['Item_ID'];
 
   try
   {
@@ -48,11 +48,11 @@
 
   $Recipient = null;
   if ( !empty($_GET['Recipient']) )
-    $Recipient = Purify($_GET['Recipient']);
+    $Recipient = Purify($_GET['Recipient']); // Can be Username or ID, Purify is fine
 
   $Amount = null;
   if ( !empty($_GET['Amount']) )
-    $Amount = Purify($_GET['Amount']);
+    $Amount = (int)$_GET['Amount'];
 
   switch ( $Action )
   {

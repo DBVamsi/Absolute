@@ -17,8 +17,13 @@
     exit;
   }
 
-  if ( !empty($_GET['Pokemon_Action']) && in_array($_GET['Pokemon_Action'], ['Delete', 'Freeze', 'Move_List', 'Show', 'Update_Pokemon', 'Update_Move']) )
-    $Pokemon_Action = Purify($_GET['Pokemon_Action']);
+  $Pokemon_Action_Input = $_GET['Pokemon_Action'] ?? '';
+  $allowed_pokemon_actions = ['Delete', 'Freeze', 'Move_List', 'Show', 'Update_Pokemon', 'Update_Move'];
+
+  if ( !empty($Pokemon_Action_Input) && in_array($Pokemon_Action_Input, $allowed_pokemon_actions, true) )
+    $Pokemon_Action = $Pokemon_Action_Input; // Whitelisted, Purify not needed
+  else
+    $Pokemon_Action = null; // Or handle error explicitly
 
   if ( empty($Pokemon_Action) )
   {
@@ -32,31 +37,31 @@
 
   $Pokemon_Frozen_Status = 0;
   if ( !empty($_GET['Pokemon_Frozen_Status']) )
-    $Pokemon_Frozen_Status = Purify($_GET['Pokemon_Frozen_Status']);
+    $Pokemon_Frozen_Status = (int)$_GET['Pokemon_Frozen_Status'];
 
   $Pokemon_Move_Slot = 1;
   if ( !empty($_GET['Pokemon_Move_Slot']) )
-    $Pokemon_Move_Slot = Purify($_GET['Pokemon_Move_Slot']);
+    $Pokemon_Move_Slot = (int)$_GET['Pokemon_Move_Slot'];
 
   $Pokemon_Move_Value = 1;
   if ( !empty($_GET['Pokemon_Move_Value']) )
-    $Pokemon_Move_Value = Purify($_GET['Pokemon_Move_Value']);
+    $Pokemon_Move_Value = (int)$_GET['Pokemon_Move_Value'];
 
   $Pokemon_Level = 1;
   if ( !empty($_GET['Pokemon_Level']) )
-    $Pokemon_Level = Purify($_GET['Pokemon_Level']);
+    $Pokemon_Level = (int)$_GET['Pokemon_Level'];
 
-  $Pokemon_Gender = 1;
+  $Pokemon_Gender = 1; // Default or placeholder
   if ( !empty($_GET['Pokemon_Gender']) )
-    $Pokemon_Gender = Purify($_GET['Pokemon_Gender']);
+    $Pokemon_Gender = Purify($_GET['Pokemon_Gender']); // String, Purify is fine
 
-  $Pokemon_Nature = 1;
+  $Pokemon_Nature = 1; // Default or placeholder
   if ( !empty($_GET['Pokemon_Nature']) )
-    $Pokemon_Nature = Purify($_GET['Pokemon_Nature']);
+    $Pokemon_Nature = Purify($_GET['Pokemon_Nature']); // String, Purify is fine
 
   $Pokemon_Ability = 1;
   if ( !empty($_GET['Pokemon_Ability']) )
-    $Pokemon_Ability = Purify($_GET['Pokemon_Ability']);
+    $Pokemon_Ability = (int)$_GET['Pokemon_Ability'];
 
   switch ( $Pokemon_Action )
   {

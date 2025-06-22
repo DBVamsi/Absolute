@@ -1,6 +1,6 @@
 services:
-    web:
-        container_name: absolute-web
+    ecrpg-nginx:
+        container_name: ecrpg-nginx
         image: nginx:latest
         ports:
             - 80:80
@@ -13,21 +13,21 @@ services:
             - ./logs:/logs
             - chat-build:/app/js/chat
         depends_on:
-            - mysql
-            - chat
+            - ecrpg-mysql # Updated dependency
+            - ecrpg-chat  # Updated dependency
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
 
-    mysql:
-        container_name: absolute-mysql
+    ecrpg-mysql:
+        container_name: ecrpg-mysql
         image: mariadb:10.7
         env_file:
             - .env
         environment:
             MARIADB_AUTO_UPGRADE: 1
         volumes:
-            - absolute-mysqldata:/var/lib/mysql
+            - ecrpg-mysqldata:/var/lib/mysql # Updated volume
             - ./.env:/data/application/.env
             - ./config/my.cnf:/etc/mysql/my.cnf
             - ./migrations/sql:/data/application/sql
@@ -37,36 +37,37 @@ services:
         ports:
             - 3307:3306
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
 
-    phpmyadmin:
-        container_name: absolute-phpmyadmin
+    ecrpg-phpmyadmin:
+        container_name: ecrpg-phpmyadmin
         image: phpmyadmin:latest
         environment:
-            PMA_HOST: mysql
+            PMA_HOST: ecrpg-mysql # Updated PMA_HOST
             PMA_ABSOLUTE_URI: '/db/'
             UPLOAD_LIMIT: 512M
         depends_on:
-            - mysql
+            - ecrpg-mysql # Updated dependency
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
 
-    certbot:
+    ecrpg-certbot: # Renamed for consistency
+        container_name: ecrpg-certbot
         image: certbot/certbot:latest
         volumes:
             - ./certbot/www:/var/www/certbot
             - ./certbot/conf:/etc/letsencrypt
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
 
-    php:
-        container_name: absolute-php
+    ecrpg-php-fpm: # Renamed for clarity and consistency
+        container_name: ecrpg-php-fpm
         build:
             context: .
-            dockerfile: dockerfiles/absolute.dockerfile
+            dockerfile: dockerfiles/absolute.dockerfile # Dockerfile name might also need update later
         env_file:
             - .env
         volumes:
@@ -79,49 +80,49 @@ services:
         extra_hosts:
             - "host.docker.internal:host-gateway"
         depends_on:
-            - mysql
+            - ecrpg-mysql # Updated dependency
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
 
-    discord:
-        container_name: absolute-discord
+    ecrpg-discord:
+        container_name: ecrpg-discord
         restart: on-failure
         init: true
         build:
             context: .
-            dockerfile: dockerfiles/discord.dockerfile
+            dockerfile: dockerfiles/discord.dockerfile # Dockerfile name might also need update later
         volumes:
-            - ./absolute/discord:/app/discord
+            - ./absolute/discord:/app/discord # Path to submodule - keep as is unless submodule dir name changed
         ports:
             - 3000:3000
         depends_on:
-            - mysql
+            - ecrpg-mysql # Updated dependency
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
-    chat:
-        container_name: absolute-chat
+    ecrpg-chat:
+        container_name: ecrpg-chat
         restart: on-failure
         init: true
         build:
             context: .
-            dockerfile: dockerfiles/chat.dockerfile
+            dockerfile: dockerfiles/chat.dockerfile # Dockerfile name might also need update later
         volumes:
             - chat-build:/chat/build/client
         ports:
             - 8080:8080
         depends_on:
-            - mysql
+            - ecrpg-mysql # Updated dependency
         networks:
-            - absolute
+            - ecrpg-network # Updated network
 
 
 volumes:
-    absolute-mysqldata: {}
+    ecrpg-mysqldata: {} # Updated volume name
     chat-build: {}
 
 networks:
-    absolute:
-        name: absolute
+    ecrpg-network: # Updated network name
+        name: ecrpg-network # Explicitly name the network
         driver: bridge

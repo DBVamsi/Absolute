@@ -3,7 +3,9 @@
   require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/set_items.php';
 
   if ( !empty($_GET['Database_Table']) && in_array($_GET['Database_Table'], ['shop_items']) )
-    $Database_Table = Purify($_GET['Database_Table']);
+    $Database_Table = $_GET['Database_Table']; // Whitelisted, Purify not needed
+  else
+    $Database_Table = null;
 
   if ( empty($Database_Table) )
   {
@@ -15,12 +17,13 @@
     exit;
   }
 
-  if
-  (
-    !empty($_GET['Action']) &&
-    in_array($_GET['Action'], ['Create_Item_Entry', 'Edit_Item_Entry', 'Finalize_Item_Creation', 'Finalize_Item_Edit', 'Show', 'Show_Location'])
-  )
-    $Action = Purify($_GET['Action']);
+  $Action_Input = $_GET['Action'] ?? '';
+  $allowed_actions = ['Create_Item_Entry', 'Edit_Item_Entry', 'Finalize_Item_Creation', 'Finalize_Item_Edit', 'Show', 'Show_Location'];
+
+  if ( !empty($Action_Input) && in_array($Action_Input, $allowed_actions, true) )
+    $Action = $Action_Input; // Whitelisted, Purify not needed
+  else
+    $Action = null;
 
   if ( empty($Action) )
   {
@@ -34,31 +37,31 @@
 
   $Obtainable_Location = null;
   if ( !empty($_GET['Obtainable_Location']) )
-    $Obtainable_Location = Purify($_GET['Obtainable_Location']);
+    $Obtainable_Location = Purify($_GET['Obtainable_Location']); // String, Purify is fine
 
   $Item_Database_ID = null;
   if ( !empty($_GET['Item_Database_ID']) )
-    $Item_Database_ID = Purify($_GET['Item_Database_ID']);
+    $Item_Database_ID = (int)$_GET['Item_Database_ID'];
 
   $Item_ID = null;
   if ( !empty($_GET['Item_ID']) )
-    $Item_ID = Purify($_GET['Item_ID']);
+    $Item_ID = (int)$_GET['Item_ID'];
 
   $Is_Item_Active = null;
   if ( !empty($_GET['Is_Item_Active']) )
-    $Is_Item_Active = Purify($_GET['Is_Item_Active']);
+    $Is_Item_Active = (int)$_GET['Is_Item_Active'];
 
   $Items_Remaining = null;
   if ( !empty($_GET['Items_Remaining']) )
-    $Items_Remaining = Purify($_GET['Items_Remaining']);
+    $Items_Remaining = (int)$_GET['Items_Remaining'];
 
   $Money_Cost = null;
   if ( !empty($_GET['Money_Cost']) )
-    $Money_Cost = Purify($_GET['Money_Cost']);
+    $Money_Cost = (int)$_GET['Money_Cost'];
 
   $Abso_Coins_Cost = null;
   if ( !empty($_GET['Abso_Coins_Cost']) )
-    $Abso_Coins_Cost = Purify($_GET['Abso_Coins_Cost']);
+    $Abso_Coins_Cost = (int)$_GET['Abso_Coins_Cost'];
 
   switch ( $Action )
   {

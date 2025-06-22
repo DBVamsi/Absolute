@@ -1,77 +1,29 @@
 <?php
-	require_once 'core/required/layout_top.php';
+    require_once __DIR__ . '/core/required/layout_top.php';
 
-	if ( isset($_SESSION['EvoChroniclesRPG']) )
-	{
+    // Initialize view variables
+    $view_is_logged_in = isset($User_Data); // $User_Data is set in session.php if logged in
+    $view_username = $view_is_logged_in ? $User_Data['Username'] : null;
+    $view_site_stats = ['user_count' => 0, 'pokemon_count' => 0]; // Default values
+
+    // Fetch site statistics
+    if (isset($User_Class)) { // User_Class is an instance of User from session.php
+        $view_site_stats = $User_Class->FetchSiteStatistics();
+    }
+
+    // Any other data preparation for the homepage can go here
+    // For example, fetching latest news (if a news service existed)
+    // $view_latest_news = $News_Service->FetchLatestNews(3);
+
+    // Path to the view file
+    $view_file_path = __DIR__ . '/views/main/index_view.php';
+
+    if (file_exists($view_file_path)) {
+        require_once $view_file_path;
+    } else {
+        // Fallback or error if view file is missing
+        echo "<div class='panel content'><div class='head'>Error</div><div class='body' style='padding: 5px;'>Homepage view is currently unavailable.</div></div>";
+    }
+
+    require_once __DIR__ . '/core/required/layout_bottom.php';
 ?>
-
-<div class='panel content'>
-	<div class='head'>Index</div>
-	<div class='body'>
-		Welcome back to Evo-Chronicles RPG, <?= $User_Data['Username']; ?>.
-	</div>
-</div>
-
-<?php
-	}
-	else
-	{
-		$Last_Active = strtotime("-24 hours", time());
-
-		try
-		{
-      $Misc_Count_Query = $PDO->prepare("
-        SELECT
-          (SELECT COUNT(*) FROM `users` WHERE `last_active` > ?) as online_count,
-          (SELECT COUNT(*) FROM `users`) as user_count,
-          (SELECT COUNT(*) FROM `pokemon`) as pokemon_count;
-      ");
-      $Misc_Count_Query->execute([ $Last_Active ]);
-      $Count_Data = $Misc_Count_Query->fetch();
-		}
-		catch ( PDOException $e )
-		{
-			HandleError($e);
-		}
-?>
-
-<div class='panel content' style='margin: 5px; width: calc(100% - 14px);'>
-	<div class='head'>Index</div>
-	<div class='body'>
-		<div class='nav'>
-			<div><a href='index.php' style='display: block;'>Home</a></div>
-			<div><a href='login.php' style='display: block;'>Login</a></div>
-			<div><a href='register.php' style='display: block;'>Register</a></div>
-			<div><a href='discord.php' style='display: block;'>Discord</a></div>
-		</div>
-
-		<div class='description' style='width: 70%;'>
-			Pokémon Evo-Chronicles RPG is home to <b><?= number_format($Count_Data['user_count']); ?></b> trainers and <b><?= number_format($Count_Data['pokemon_count']); ?></b> Pokémon!
-		</div>
-
-    <div>
-      Pokémon Evo-Chronicles RPG is an up-to-date multiplayer Pokémon RPG, featuring all currently released canonical Pokémon
-      from the main Pokémon games!
-      <br /><br />
-      Among featuring a plethora of unique gameplay content to explore, we offer content that will appeal to all
-      trainers, new and old, including content that Pok&eacute;mon veterans will find nostalgic.
-      <br /><br />
-      Sign up, catch and train brand new Pok&eacute;mon, and initiate trades with other users so that you can rise to the top!
-      <br /><br />
-      We have all sorts of Pok&eacute;mon, including Normal and Shiny ones!
-      <br />
-      <img src='<?= DOMAIN_SPRITES; ?>/Pokemon/Sprites/Normal/359.png' />
-      <img src='<?= DOMAIN_SPRITES; ?>/Pokemon/Sprites/Shiny/359.png' />
-
-      <div style='font-size: 12px; margin-top: 20px;'>
-        This website is designed and optimized for Chromium based browsers.<br />
-        It's recommended to use a Chromium based browser such as Google Chrome or Brave while browsing this website.
-      </div>
-    </div>
-	</div>
-</div>
-
-<?php
-	}
-
-	require_once 'core/required/layout_bottom.php';

@@ -217,10 +217,11 @@
   <?php
     if ( !empty($_GET['Message_Recipient']) )
     {
-      $Recipient_ID = Purify($_GET['Message_Recipient']);
-      $_SESSION['EvoChroniclesRPG']['Direct_Message']['Message_Recipient'] = $Recipient_ID;
-
-      echo 'DisplayComposeMessage();';
+      $Recipient_ID = isset($_GET['Message_Recipient']) ? (int)$_GET['Message_Recipient'] : 0;
+      if ($Recipient_ID > 0) { // Only set session and call JS if ID is valid
+        $_SESSION['EvoChroniclesRPG']['Direct_Message']['Message_Recipient'] = $Recipient_ID;
+        echo 'DisplayComposeMessage();';
+      }
     }
   ?>
 </script>

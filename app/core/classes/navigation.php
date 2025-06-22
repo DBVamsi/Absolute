@@ -1,16 +1,57 @@
 <?php
-  require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/permissions.php';
-  require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/report.php';
+  // Note: These require_once statements load procedural function files.
+  // CheckUserPermission and GetActiveReports are used.
+  // Ideally, their logic would be part of services injected into this class if needed,
+  // or this class would receive pre-calculated permissions/counts.
+  require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/permissions.php'; // For CheckUserPermission
+  require_once $_SERVER['DOCUMENT_ROOT'] . '/staff/functions/report.php';     // For GetActiveReports
 
+/**
+ * Handles rendering of the site's main navigation bar.
+ * Generates HTML based on user's permissions and current page context.
+ */
 	Class Navigation
 	{
+    /** @var PDO */
+    private $pdo;
+
 		/**
-		 * Render the nav bar.
+		 * Constructor for the Navigation class.
+		 *
+     * @param PDO $pdo The PDO database connection object.
 		 */
-		public function Render($Class)
+		public function __construct(PDO $pdo)
 		{
-			global $PDO;
-			global $User_Data;
+      $this->pdo = $pdo;
+		}
+
+    /**
+     * Renders the navigation bar HTML.
+     *
+     * @param string $Class The class of navigation to render (e.g., 'Staff', 'Member').
+     * @param array|null $User_Data The currently logged-in user's data. Required for personalized links and permissions.
+     * @return void This method echoes HTML directly.
+     */
+    public function Render(string $Class, ?array $User_Data): void
+		{
+      // global $PDO; // Replaced by $this->pdo
+			// global $User_Data; // Now passed as parameter
+
+			if (!$User_Data) {
+        // Handle cases where User_Data might be essential but not provided
+        // For now, assume it's provided if personalized links are expected.
+        // Or, render a very basic nav if no User_Data.
+        // Current logic heavily relies on $User_Data['Is_Staff'] etc.
+        // For a public nav, $User_Data might be null.
+        // This function as-is expects $User_Data for most paths.
+        // For simplicity, if no User_Data, assume a guest-like state or minimal nav.
+        // The original code implicitly expected $User_Data to be a global.
+        // Let's make it explicit: if no User_Data, it can't do much of its current logic.
+        // However, the original code would have errored if $User_Data global wasn't set.
+        // For a robust solution, this method would need to handle $User_Data === null gracefully
+        // by perhaps only showing public links.
+        // For this refactor, we'll assume $User_Data is provided if user-specific nav is needed.
+			}
 
 			/**
 			 * Parse the current URL.
@@ -22,14 +63,12 @@
 			 */
 			try
 			{
-				$Query_Headers = $PDO->prepare("SELECT * FROM `navigation` WHERE `Class` = ? AND `Type` = 'Header'");
+				$Query_Headers = $this->pdo->prepare("SELECT * FROM `navigation` WHERE `Class` = ? AND `Type` = 'Header'");
 				$Query_Headers->execute([ $Class ]);
-				$Query_Headers->setFetchMode(PDO::FETCH_ASSOC);
-				$Headers = $Query_Headers->fetchAll();
+				$Headers = $Query_Headers->fetchAll(); // Default fetch mode is PDO::FETCH_ASSOC from session.php
 
-				$Query_Links = $PDO->prepare("SELECT * FROM `navigation` WHERE `Class` = ? AND `Type` = 'Link'");
+				$Query_Links = $this->pdo->prepare("SELECT * FROM `navigation` WHERE `Class` = ? AND `Type` = 'Link'");
 				$Query_Links->execute([ $Class ]);
-				$Query_Links->setFetchMode(PDO::FETCH_ASSOC);
 				$Links = $Query_Links->fetchAll();
 			}
 			catch ( PDOException $e )
@@ -48,38 +87,44 @@
           </button>
 
           <button id='chatButton'>
-            <img src='" . DOMAIN_SPRITES . "/Pokemon/Icons/Normal/359.png' />
+            <img src='" . htmlspecialchars(DOMAIN_SPRITES . "/Pokemon/Icons/Normal/359.png", ENT_QUOTES | ENT_HTML5, 'UTF-8') . "' alt='Chat' />
           </button>
 			";
 
 			// Display the Staff Panel button/Index button, given the user is a staff member.
-			if ( $User_Data['Is_Staff']  )
+      // Ensure $User_Data is available before accessing its keys.
+			if ( isset($User_Data['Is_Staff']) && $User_Data['Is_Staff'] )
 			{
 				if ( strpos($URL['path'], '/staff/') === false )
 				{
-					$Link_URL = DOMAIN_ROOT . '/staff/';
-					$Link_Name = 'Staff Panel';
+					$Link_URL_Base = DOMAIN_ROOT . '/staff/';
+					$Link_Name_Base = 'Staff Panel';
 				}
 				else
 				{
-					$Link_URL = DOMAIN_ROOT . '/news.php';
-					$Link_Name = 'Index';
+					$Link_URL_Base = DOMAIN_ROOT . '/news.php';
+					$Link_Name_Base = 'Index';
 				}
 
-        $Notification_Amount = 0;
-        $Notification_Text = '';
+        $Notification_Count = 0; // Use a different name to avoid confusion if $Notification_Amount is used later
+        $Notification_HTML = '';
 
-        $Reported_Users = count(GetActiveReports());
-        if ( $Reported_Users > 0 )
-          $Notification_Amount += $Reported_Users;
+        // GetActiveReports() is a global function from procedural file.
+        // This should ideally be part of a service.
+        $Reported_Users_Count = count(GetActiveReports());
+        if ( $Reported_Users_Count > 0 )
+          $Notification_Count += $Reported_Users_Count;
 
-        if ( $Notification_Amount > 0 && $Link_Name == 'Staff Panel' )
-          $Notification_Text = " (<b style='color: red;'> {$Notification_Amount} </b>)";
+        if ( $Notification_Count > 0 && $Link_Name_Base == 'Staff Panel' )
+          $Notification_HTML = " (<b style='color: red;'>" . htmlspecialchars((string)$Notification_Count, ENT_QUOTES | ENT_HTML5, 'UTF-8') . "</b>)";
+
+        $Link_URL_Escaped = htmlspecialchars($Link_URL_Base, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $Link_Name_Escaped = htmlspecialchars($Link_Name_Base, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
 				echo "
 					<div class='nav-container'>
             <div class='button'>
-              <a href='{$Link_URL}'>{$Link_Name}{$Notification_Text}</a>
+              <a href='{$Link_URL_Escaped}'>{$Link_Name_Escaped}{$Notification_HTML}</a>
             </div>
 				";
 			}
@@ -91,84 +136,67 @@
 			}
 
 			// Loop through navigation headers.
-			$Display_Links = '';
+			$Display_Links_HTML = ''; // Changed variable name for clarity
 			foreach ( $Headers as $Key => $Head )
 			{
+        // CheckUserPermission is a global function from procedural file.
         if ( $Class == 'Staff' && (!isset($Head['Required_Permission']) || !CheckUserPermission($Head['Required_Permission'])) ) {
           continue;
         }
 
-				/**
-				 * Loop through the appropriate links.
-				 * Only display if it's under the proper menu, and you have the sufficient power level.
-				 */
-				foreach ( $Links as $Key => $Link )
+				foreach ( $Links as $Link_Key => $Link ) // Changed $Key to $Link_Key to avoid conflict
 				{
-					/**
-					 * If the link is set to be hidden, continue.
-					 */
-					if ( $Link['Hidden'] == 'yes' )
+					if ( ($Link['Hidden'] ?? 'no') == 'yes' ) // Handle case where 'Hidden' might not be set
 					{
 						continue;
 					}
 
-					/**
-					 * Staff panel links.
-					 */
-					if ( $Class == 'Staff' )
+					if ( $Link['Menu'] === $Head['Menu'] && CheckUserPermission($Link['Required_Permission']) )
 					{
-						if ( $Link['Menu'] === $Head['Menu'] && CheckUserPermission($Link['Required_Permission']) )
+            $Notification_HTML_Link = ''; // For individual link notifications
+            $Link_Name_Escaped = htmlspecialchars($Link['Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $Link_URLEscaped = htmlspecialchars($Link['Link'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+						if ( $Class == 'Staff' )
 						{
-              $Notification_Amount = '';
-
-              switch ( $Link['Name'] )
-              {
-                case 'Reported Users':
-                  $Reported_Users = count(GetActiveReports());
-                  if ( $Reported_Users > 0 )
-                    $Notification_Amount = " (<b style='color: red;'> {$Reported_Users} </b>)";
-                  break;
+              // Example for individual link notifications if needed in future
+              if ( $Link['Name'] == 'Reported Users' ) {
+                $Reported_Users_Count_Link = count(GetActiveReports());
+                if ( $Reported_Users_Count_Link > 0 )
+                  $Notification_HTML_Link = " (<b style='color: red;'>" . htmlspecialchars((string)$Reported_Users_Count_Link, ENT_QUOTES | ENT_HTML5, 'UTF-8') . "</b>)";
               }
-
-							$Display_Links .= "
+              // Note: Using LoadPage with user-influenced Link['Link'] can be risky if Link['Link'] isn't strictly controlled.
+              // Assuming Link['Link'] is safe admin-defined slugs.
+							$Display_Links_HTML .= "
 								<div class='dropdown-item'>
-									<a href='javascript:void(0);' onclick='LoadPage(\"/staff/{$Link['Link']}\");'>{$Link['Name']}{$Notification_Amount}</a>
+									<a href='javascript:void(0);' onclick='LoadPage(\"/staff/{$Link_URLEscaped}\");'>{$Link_Name_Escaped}{$Notification_HTML_Link}</a>
 								</div>
 							";
 						}
-					}
-
-					/**
-					 * Regular member links.
-					 */
-					else
-					{
-						if ( $Link['Menu'] === $Head['Menu'] && CheckUserPermission($Link['Required_Permission']) )
+						else // Regular member links
 						{
-							$Display_Links .= "
+							$Display_Links_HTML .= "
 								<div class='dropdown-item'>
-									<a href='" . DOMAIN_ROOT . "{$Link['Link']}'>{$Link['Name']}</a>
+									<a href='" . htmlspecialchars(DOMAIN_ROOT, ENT_QUOTES | ENT_HTML5, 'UTF-8') . "{$Link_URLEscaped}'>{$Link_Name_Escaped}</a>
 								</div>
 							";
 						}
 					}
 				}
 
-				/**
-				 * Render the menu item and it's dropdown contents.
-				 */
+        $Head_Name_Escaped = htmlspecialchars($Head['Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
 				echo "
 					<div class='nav-item has-dropdown'>
             <a href='javascript:void(0);'>
-							<span>{$Head['Name']}</span>
+							<span>{$Head_Name_Escaped}</span>
 						</a>
 						<ul class='dropdown'>
-							{$Display_Links}
+							{$Display_Links_HTML}
 						</ul>
 					</div>
 				";
 
-				$Display_Links = '';
+				$Display_Links_HTML = ''; // Reset for next header
 			}
 
 			echo "

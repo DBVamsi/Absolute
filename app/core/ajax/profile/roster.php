@@ -3,7 +3,7 @@
 
   if ( isset($_GET['User_ID']) )
   {
-    $User_ID = Purify($_GET['User_ID']);
+    $User_ID = isset($_GET['User_ID']) ? (int)$_GET['User_ID'] : 0;
     $User_Info = $User_Class->FetchUserData($User_ID);
 
     if ( $User_Info )

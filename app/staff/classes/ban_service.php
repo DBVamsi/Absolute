@@ -1,10 +1,23 @@
 <?php
+/**
+ * Service class for handling user banning operations and fetching ban-related data.
+ */
   class BanService
   {
+    /** @var PDO */
     private $pdo;
+    /** @var User */
     private $userService;
+    /** @var StaffLogService */
     private $staffLogService;
 
+    /**
+     * Constructor for BanService.
+     *
+     * @param PDO $pdo The PDO database connection object.
+     * @param User $userService Instance of the User service.
+     * @param StaffLogService $staffLogService Instance of the StaffLog service.
+     */
     public function __construct(PDO $pdo, User $userService, StaffLogService $staffLogService)
     {
       $this->pdo = $pdo;
@@ -13,12 +26,14 @@
     }
 
     /**
-     * Fetch a user by ID or Username for ban processing.
-     * @param string $UserValue
-     * @return array|false
+     * Fetches a user by their ID or username for ban processing.
+     *
+     * @param string $UserValue The ID or username of the user.
+     * @return array|false An associative array of user data (ID, Username) or false if not found.
      */
     public function FetchUserForBan(string $UserValue)
     {
+      // This method allows fetching by either ID or Username, which is flexible for staff input.
       try
       {
         $Fetch_User = $this->pdo->prepare("
@@ -39,9 +54,10 @@
     }
 
     /**
-     * Fetch a user's ban status.
-     * @param int $UserID
-     * @return array|false
+     * Fetches the current ban status of a specific user.
+     *
+     * @param int $UserID The ID of the user.
+     * @return array|false An associative array of the user's ban record from `user_bans`, or false if no record exists.
      */
     public function FetchUserBanStatus(int $UserID)
     {
@@ -68,22 +84,29 @@
      * Ban a user from the RPG.
      * @param int $User_ID
      * @param int $RPG_Ban - Should be 1 (Ban) or 0 (Unban)
-     * @param string $RPG_Ban_Reason
-     * @param string $RPG_Ban_Staff_Notes
-     * @param string $RPG_Ban_Until
-     * @param int $actingStaffUserId
+     * @param string $RPG_Ban_Reason Reason for the RPG ban.
+     * @param string $RPG_Ban_Staff_Notes Staff notes regarding the RPG ban.
+     * @param string|null $RPG_Ban_Until Timestamp or parsable date string for when the ban expires. Null or empty for permanent.
+     * @param int $actingStaffUserId ID of the staff member performing the action.
+     * @return bool True on success, false on failure.
      */
     public function RPGBanUser(
       int $User_ID,
       int $RPG_Ban,
       string $RPG_Ban_Reason = '',
       string $RPG_Ban_Staff_Notes = '',
-      string $RPG_Ban_Until = '',
+      ?string $RPG_Ban_Until = null, // Allow null for permanent
       int $actingStaffUserId
-    )
+    ): bool
     {
-      if ( !$User_ID || !isset($RPG_Ban) )
+      if ( !$User_ID || !in_array($RPG_Ban, [0, 1], true) ) // Ensure RPG_Ban is 0 or 1
         return false;
+
+      // Sanitize inputs that will be stored (Purify was used in AJAX, this is defense in depth)
+      $RPG_Ban_Reason = Purify($RPG_Ban_Reason);
+      $RPG_Ban_Staff_Notes = Purify($RPG_Ban_Staff_Notes);
+      $RPG_Ban_Until = !empty($RPG_Ban_Until) ? Purify($RPG_Ban_Until) : null;
+
 
       try
       {
@@ -117,22 +140,28 @@
      * Ban a user from the chat.
      * @param int $User_ID
      * @param int $Chat_Ban - Should be 1 (Ban) or 0 (Unban)
-     * @param string $Chat_Ban_Reason
-     * @param string $Chat_Ban_Staff_Notes
-     * @param string $Chat_Ban_Until
-     * @param int $actingStaffUserId
+     * @param string $Chat_Ban_Reason Reason for the chat ban.
+     * @param string $Chat_Ban_Staff_Notes Staff notes regarding the chat ban.
+     * @param string|null $Chat_Ban_Until Timestamp or parsable date string for when the ban expires. Null or empty for permanent.
+     * @param int $actingStaffUserId ID of the staff member performing the action.
+     * @return bool True on success, false on failure.
      */
     public function ChatBanUser(
       int $User_ID,
       int $Chat_Ban,
       string $Chat_Ban_Reason = '',
       string $Chat_Ban_Staff_Notes = '',
-      string $Chat_Ban_Until = '',
+      ?string $Chat_Ban_Until = null, // Allow null for permanent
       int $actingStaffUserId
-    )
+    ): bool
     {
-      if ( !$User_ID || !isset($Chat_Ban) )
+      if ( !$User_ID || !in_array($Chat_Ban, [0, 1], true) ) // Ensure Chat_Ban is 0 or 1
         return false;
+
+      // Sanitize inputs
+      $Chat_Ban_Reason = Purify($Chat_Ban_Reason);
+      $Chat_Ban_Staff_Notes = Purify($Chat_Ban_Staff_Notes);
+      $Chat_Ban_Until = !empty($Chat_Ban_Until) ? Purify($Chat_Ban_Until) : null;
 
       try
       {
@@ -163,11 +192,13 @@
     }
 
     /**
-     * Unban a user from both RPG and Chat.
-     * @param int $User_ID
-     * @param int $actingStaffUserId
+     * Unbans a user from both RPG and Chat by resetting their ban flags and clearing reasons/notes.
+     *
+     * @param int $User_ID The ID of the user to unban.
+     * @param int $actingStaffUserId ID of the staff member performing the action.
+     * @return bool True on success, false on failure.
      */
-    public function UnbanUser(int $User_ID, int $actingStaffUserId)
+    public function UnbanUser(int $User_ID, int $actingStaffUserId): bool
     {
       if ( !$User_ID )
         return false;
@@ -199,9 +230,11 @@
     }
 
     /**
-     * Fetch all banned users.
+     * Fetches all users who are currently RPG banned or Chat banned.
+     *
+     * @return array|false An array of banned user records, or false on error.
      */
-    public function GetBannedUsers()
+    public function GetBannedUsers(): array|false
     {
       try
       {
@@ -218,10 +251,13 @@
     }
 
     /**
-     * Display all banned users.
-     * @param array $Banned_Users - Array of banned user data, typically from GetBannedUsers()
+     * Generates an HTML table string displaying all banned users.
+     * Ensures output is escaped for XSS protection.
+     *
+     * @param array $Banned_Users An array of banned user data, typically from GetBannedUsers().
+     * @return string HTML string representing the table of banned users.
      */
-    public function ShowBannedUsers(array $Banned_Users)
+    public function ShowBannedUsers(array $Banned_Users): string
     {
       if ( empty($Banned_Users) )
       {
@@ -242,23 +278,23 @@
                 <img src='../images/Assets/view_more.png' />
               </a>
             </td>
-            <td style='padding: 3px;'>{$Username}</td>
+            <td style='padding: 3px;'>{$Username}</td> <?php // Username is from DisplayUserName, already HTML ?>
             <td style='padding: 3px;'>" . ($Value['RPG_Ban'] ? "<span style='color: red;'>Yes</span>" : "<span style='color: green;'>No</span>") . "</td>
-            <td style='padding: 3px;'>{$RPG_Banned_Until}</td>
+            <td style='padding: 3px;'>" . htmlspecialchars($RPG_Banned_Until, ENT_QUOTES | ENT_HTML5, 'UTF-8') . "</td>
             <td style='padding: 3px;'>" . ($Value['Chat_Ban'] ? "<span style='color: red;'>Yes</span>" : "<span style='color: green;'>No</span>") . "</td>
-            <td style='padding: 3px;'>{$Chat_Banned_Until}</td>
+            <td style='padding: 3px;'>" . htmlspecialchars($Chat_Banned_Until, ENT_QUOTES | ENT_HTML5, 'UTF-8') . "</td>
             <td style='padding: 3px; width: 25px;'>
               <a href='javascript:void(0);' onclick=\"UnbanUser({$Value['User_ID']});\">
-                <img src='../images/Assets/delete.png' />
+                <img src='../images/Assets/delete.png' alt='Unban' />
               </a>
             </td>
           </tr>
           <tr id='Ban_Info_{$Value['User_ID']}' style='display: none;'>
-            <td colspan='7'>
-              <b>RPG Ban Reason</b>: {$Value['RPG_Ban_Reason']}<br />
-              <b>RPG Ban Staff Notes</b>: {$Value['RPG_Ban_Staff_Notes']}<br />
-              <b>Chat Ban Reason</b>: {$Value['Chat_Ban_Reason']}<br />
-              <b>Chat Ban Staff Notes</b>: {$Value['Chat_Ban_Staff_Notes']}
+            <td colspan='7' style='padding: 5px; text-align: left; background-color: #f9f9f9;'>
+              <b>RPG Ban Reason</b>: " . htmlspecialchars($Value['RPG_Ban_Reason'] ?? 'N/A', ENT_QUOTES | ENT_HTML5, 'UTF-8') . "<br />
+              <b>RPG Ban Staff Notes</b>: " . htmlspecialchars($Value['RPG_Ban_Staff_Notes'] ?? 'N/A', ENT_QUOTES | ENT_HTML5, 'UTF-8') . "<br />
+              <b>Chat Ban Reason</b>: " . htmlspecialchars($Value['Chat_Ban_Reason'] ?? 'N/A', ENT_QUOTES | ENT_HTML5, 'UTF-8') . "<br />
+              <b>Chat Ban Staff Notes</b>: " . htmlspecialchars($Value['Chat_Ban_Staff_Notes'] ?? 'N/A', ENT_QUOTES | ENT_HTML5, 'UTF-8') . "
             </td>
           </tr>
         ";

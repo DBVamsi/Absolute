@@ -26,7 +26,7 @@
 
   $Ban_Type = 'RPG';
   if ( !empty($_GET['Ban_Type']) && in_array($_GET['Ban_Type'], ['RPG', 'Chat']) )
-    $Ban_Type = Purify($_GET['Ban_Type']);
+    $Ban_Type = $_GET['Ban_Type']; // Whitelisted, Purify not needed
 
   $Unban_Date = null;
   if ( !empty($_GET['Unban_Date']) && gettype($_GET['Unban_Date']) === 'string' && strlen($_GET['Unban_Date']) == 8 )

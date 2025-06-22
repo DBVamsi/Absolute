@@ -15,10 +15,11 @@
     return;
   }
 
-  $User_ID = Purify($_POST['id']);
-  $Page = (isset($_POST['Page'])) ? Purify($_POST['Page']) : 1;
-  $Filter_Type = (isset($_POST['filter_type'])) ? Purify($_POST['filter_type']) : 0;
-  $Filter_Gender = (isset($_POST['filter_gender'])) ? Purify($_POST['filter_gender']) : 0;
+  $User_ID = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+  $Page = (isset($_POST['Page'])) ? (int)$_POST['Page'] : 1;
+  if ($Page < 1) $Page = 1;
+  $Filter_Type = (isset($_POST['filter_type'])) ? Purify($_POST['filter_type']) : 0; // String, Purify fine
+  $Filter_Gender = (isset($_POST['filter_gender'])) ? Purify($_POST['filter_gender']) : 0; // String, Purify fine
   $Filter_Dir = (isset($_POST['filter_search_order'])) ? Purify($_POST['filter_search_order']) : 'ASC';
 
   $Begin = ($Page - 1) * 35;

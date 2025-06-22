@@ -3,8 +3,12 @@
   require_once $_SERVER['DOCUMENT_ROOT'] . '/pages/pokemon_center/functions/roster.php';
   require_once $_SERVER['DOCUMENT_ROOT'] . '/pages/pokemon_center/functions/nickname.php';
 
-  if ( !empty($_GET['Action']) && in_array($_GET['Action'], ['Get_Roster', 'Update_Nickname']) )
-    $Action = Purify($_GET['Action']);
+  $Action_Input = $_GET['Action'] ?? '';
+  $allowed_actions = ['Get_Roster', 'Update_Nickname'];
+  $Action = null;
+
+  if ( !empty($Action_Input) && in_array($Action_Input, $allowed_actions, true) )
+    $Action = $Action_Input; // Whitelisted, Purify not needed
 
   if ( empty($Action) )
   {
@@ -18,7 +22,7 @@
 
   $Pokemon_ID = null;
   if ( !empty($_GET['Pokemon_ID']) )
-    $Pokemon_ID = Purify($_GET['Pokemon_ID']);
+    $Pokemon_ID = (int)$_GET['Pokemon_ID'];
 
   $Nickname = null;
   if ( !empty($_GET['Nickname']) )

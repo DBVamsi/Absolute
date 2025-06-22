@@ -20,7 +20,7 @@
     return;
   }
 
-  $Group_ID = Purify(intval($_GET['Group_ID']));
+  $Group_ID = isset($_GET['Group_ID']) ? (int)$_GET['Group_ID'] : 0;
 
   $Direct_Message = new DirectMessage();
   $Messages = $Direct_Message->FetchMessage($Group_ID, $User_Data['ID']);

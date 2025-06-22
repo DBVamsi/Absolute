@@ -1,5 +1,5 @@
 # Features
-Absolute has been developed from the ground up with love, and thus comes with a wide variety of features.
+Evo-Chronicles RPG has been developed from the ground up with love, and thus comes with a wide variety of features.
 
 Some features are what fans of Pok&eacute;mon would come to expect - battles, exploring hand created worlds - as well as brand new features - multiplayer clans and real-time chatting.
 

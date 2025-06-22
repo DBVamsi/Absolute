@@ -162,12 +162,12 @@
 		 */
 		if ( isset($_GET['Action']) && isset($_GET['ID']) )
 		{
-			$Action = Purify($_GET['Action']);
-			$User_ID = Purify($_GET['ID']);
+			$Action = Purify($_GET['Action']); // Whitelisted string, Purify is fine
+			$User_ID = isset($_GET['ID']) ? (int)$_GET['ID'] : 0;
 
-			if ( $Action == "Create" )
+			if ( $Action == "Create" && $User_ID > 0 ) // Ensure User_ID is valid before using
 			{
-				echo "TradePrepare($User_ID);";
+				echo "TradePrepare({$User_ID});";
 			}
 		}
 	?>

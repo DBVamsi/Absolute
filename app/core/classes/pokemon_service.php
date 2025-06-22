@@ -1,26 +1,54 @@
 <?php
+/**
+ * Handles Pokémon related operations such as creation, data fetching, and management.
+ */
   class PokemonService
   {
+    /**
+     * @var PDO The database connection object.
+     */
     private $pdo;
 
+    /**
+     * Constructor for PokemonService.
+     *
+     * @param PDO $pdo The PDO database connection object.
+     */
     public function __construct(PDO $pdo)
     {
       $this->pdo = $pdo;
     }
 
+    /**
+     * Creates a new Pokémon for a given user.
+     * Determines roster slot or box placement. Generates gender, ability, nature, IVs if not provided.
+     *
+     * @param int $Owner_ID The ID of the user who will own this Pokémon.
+     * @param int $Pokedex_ID The Pokedex ID of the Pokémon species.
+     * @param int $Alt_ID The alternate form ID of the Pokémon.
+     * @param int $Level The level of the Pokémon. Defaults to 5.
+     * @param string $Type The type of the Pokémon (e.g., Normal, Shiny). Defaults to "Normal".
+     * @param string|null $Gender The gender of the Pokémon. Auto-generated if null.
+     * @param string $Obtained_At Describes where/how the Pokémon was obtained. Defaults to "Unknown".
+     * @param string|null $Nature The nature of the Pokémon. Auto-generated if null.
+     * @param string|null $IVs Comma-separated string of IV values. Auto-generated if null.
+     * @param string|null $EVs Comma-separated string of EV values. Defaults to "0,0,0,0,0,0" if null.
+     * @return array|false An associative array of the created Pokémon's data, or false on failure.
+     */
     public function CreatePokemon(
-      $Owner_ID,
-      $Pokedex_ID,
-      $Alt_ID,
+      int $Owner_ID,
+      int $Pokedex_ID,
+      int $Alt_ID,
       $Level = 5,
       $Type = "Normal",
       $Gender = null,
       $Obtained_At = "Unknown",
       $Nature = null,
       $IVs = null,
-      $EVs = null
+      ?string $EVs = null
     )
     {
+      // Fetch base Pokédex data for the species
       $Pokemon = $this->GetPokedexData($Pokedex_ID, $Alt_ID, $Type);
       if ( !$Pokemon )
         return false;
@@ -136,7 +164,14 @@
       ];
     }
 
-    public function GetAbilities($Pokedex_ID, $Alt_ID)
+    /**
+     * Fetches the possible abilities for a given Pokémon species and form.
+     *
+     * @param int $Pokedex_ID The Pokedex ID of the Pokémon.
+     * @param int $Alt_ID The alternate form ID of the Pokémon.
+     * @return array|false Associative array of abilities (Ability_1, Ability_2, Hidden_Ability) or false if not found.
+     */
+    public function GetAbilities(int $Pokedex_ID, int $Alt_ID)
     {
       try
       {
@@ -162,7 +197,14 @@
       return $Abilities;
     }
 
-    public function GetBaseStats($Pokedex_ID, $Alt_ID)
+    /**
+     * Fetches the base stats for a given Pokémon species and form.
+     *
+     * @param int $Pokedex_ID The Pokedex ID of the Pokémon.
+     * @param int $Alt_ID The alternate form ID of the Pokémon.
+     * @return array|false Associative array of base stats (HP, Attack, etc.) or false if not found.
+     */
+    public function GetBaseStats(int $Pokedex_ID, int $Alt_ID)
     {
       try
       {
@@ -236,7 +278,13 @@
       return $Stats;
     }
 
-    public function GetMoveData($Move_ID)
+    /**
+     * Fetches data for a specific move.
+     *
+     * @param int $Move_ID The ID of the move.
+     * @return array|false Associative array of move data or false if not found.
+     */
+    public function GetMoveData(int $Move_ID)
     {
       try
       {
@@ -254,6 +302,12 @@
       if ( !$Move_Data )
         return false;
 
+      // Escape data intended for HTML display
+      $Move_Data['Name'] = htmlspecialchars($Move_Data['Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      $Move_Data['Effect_Short'] = htmlspecialchars($Move_Data['Effect_Short'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      // Other fields like Type, Category are usually from a fixed set or used as keys, but escaping wouldn't hurt if displayed.
+      // For now, focusing on Name and Description (Effect_Short).
+
       return [
         "ID" => $Move_Data['ID'], "Name" => $Move_Data['Name'], "Type" => $Move_Data['Move_Type'],
         "Category" => $Move_Data['Category'], "Power" => $Move_Data['Power'], "Accuracy" => $Move_Data['Accuracy'],
@@ -261,8 +315,17 @@
       ];
     }
 
-    public function GetPokedexData($Pokedex_ID = null, $Alt_ID = 0, $Type = "Normal")
+    /**
+     * Fetches data for a Pokémon species from the Pokedex.
+     *
+     * @param int|null $Pokedex_ID The Pokedex ID of the Pokémon.
+     * @param int $Alt_ID The alternate form ID of the Pokémon. Defaults to 0.
+     * @param string $Type The type of the Pokémon (e.g., Normal, Shiny) for sprite purposes. Defaults to "Normal".
+     * @return array|false Associative array of Pokedex data or false if not found.
+     */
+    public function GetPokedexData(?int $Pokedex_ID = null, int $Alt_ID = 0, string $Type = "Normal")
     {
+      if ($Pokedex_ID === null) return false; // Ensure Pokedex_ID is provided
       try
       {
         $Get_Pokedex_Data = $this->pdo->prepare("SELECT * FROM `pokedex` WHERE `Pokedex_ID` = ? AND `Alt_ID` = ? LIMIT 1");
@@ -283,19 +346,39 @@
       $Type_Display = ($Type != 'Normal') ? $Type : '';
       $Name = $Pokedex_Data['Pokemon'];
       $Display_Name = empty($Pokedex_Data['Forme']) ? $Type_Display . $Pokedex_Data['Pokemon'] : $Type_Display . $Pokedex_Data['Pokemon'] . " " . $Pokedex_Data['Forme'];
-      $Poke_Images = $this->GetSprites($Pokedex_Data['Pokedex_ID'], $Pokedex_Data['Alt_ID'], $Type);
+      $Poke_Images = $this->GetSprites($Pokedex_Data['Pokedex_ID'], $Pokedex_Data['Alt_ID'], $Type); // GetSprites now returns escaped URLs
 
       return [
-        "ID" => $Pokedex_Data['ID'], "Pokedex_ID" => $Pokedex_Data['Pokedex_ID'], "Alt_ID" => $Pokedex_Data['Alt_ID'],
-        "Name" => $Name, "Forme" => $Pokedex_Data['Forme'], "Display_Name" => $Display_Name,
-        "Type_Primary" => $Pokedex_Data['Type_Primary'], "Type_Secondary" => $Pokedex_Data['Type_Secondary'],
-        "Base_Stats" => $BaseStats, 'Exp_Yield' => $Pokedex_Data['Exp_Yield'], 'Height' => $Pokedex_Data['Height'], 'Weight' => $Pokedex_Data['Weight'],
-        "Sprite" => $Poke_Images['Sprite'], "Icon" => $Poke_Images['Icon'],
+        "ID" => $Pokedex_Data['ID'],
+        "Pokedex_ID" => $Pokedex_Data['Pokedex_ID'],
+        "Alt_ID" => $Pokedex_Data['Alt_ID'],
+        "Name" => htmlspecialchars($Name, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        "Forme" => htmlspecialchars($Pokedex_Data['Forme'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        "Display_Name" => htmlspecialchars($Display_Name, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        "Type_Primary" => htmlspecialchars($Pokedex_Data['Type_Primary'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        "Type_Secondary" => htmlspecialchars($Pokedex_Data['Type_Secondary'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        "Base_Stats" => $BaseStats, // Array of numbers, no escaping needed
+        'Exp_Yield' => $Pokedex_Data['Exp_Yield'], // Number
+        'Height' => $Pokedex_Data['Height'], // Number
+        'Weight' => $Pokedex_Data['Weight'], // Number
+        "Sprite" => $Poke_Images['Sprite'], // Already escaped by GetSprites
+        "Icon" => $Poke_Images['Icon'],     // Already escaped by GetSprites
       ];
     }
 
-    public function GetPokemonData($Pokemon_ID)
+    /**
+     * Fetches detailed information for a specific Pokémon instance.
+     *
+     * @param int $Pokemon_ID The database ID of the Pokémon.
+     * @return array|false An associative array of Pokémon data, or false if not found.
+     */
+    public function GetPokemonData(int $Pokemon_ID): array|false
     {
+      // Validate Pokemon_ID
+      if ($Pokemon_ID <= 0) { // Simplified check as it's type-hinted int
+          error_log("GetPokemonData: Invalid Pokemon_ID provided: {$Pokemon_ID}");
+          return false;
+      }
       try
       {
         $Get_Pokemon_Data = $this->pdo->prepare("SELECT * FROM `pokemon` WHERE `ID` = ? LIMIT 1");
@@ -337,39 +420,93 @@
       }
 
       $Stats = $this->GetCurrentStats($Pokemon_ID);
-      $Display_Name = ($Pokemon_Data['Type'] !== 'Normal' ? $Pokemon_Data['Type'] : '') . $Pokemon_Data['Name'];
-      if ( $Pokemon_Data['Forme'] )
-        $Display_Name .= " {$Pokemon_Data['Forme']}";
+      // Construct Display_Name. Pokedex_Data['Name'] and Pokedex_Data['Forme'] are already escaped.
+      // $Pokemon_Data['Type'] is from DB, typically a controlled vocabulary string (Normal, Shiny etc.)
+      $Display_Name_Base = htmlspecialchars_decode($Pokedex_Data['Name']); // Use raw name for construction
+      $Forme_Base = htmlspecialchars_decode($Pokedex_Data['Forme']);     // Use raw forme for construction
+      $Display_Name = ($Pokemon_Data['Type'] !== 'Normal' ? htmlspecialchars($Pokemon_Data['Type'], ENT_QUOTES | ENT_HTML5, 'UTF-8') . ' ' : '') . $Display_Name_Base;
+      if ( !empty($Forme_Base) ) // Check if Forme_Base is not empty after decode
+        $Display_Name .= " " . $Forme_Base;
+      // Re-escape the fully constructed Display_Name
+      $Display_Name_Escaped = htmlspecialchars($Display_Name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-      $Poke_Images = $this->GetSprites($Pokemon_Data['Pokedex_ID'], $Pokemon_Data['Alt_ID'], $Pokemon_Data['Type']);
+
+      $Poke_Images = $this->GetSprites($Pokemon_Data['Pokedex_ID'], $Pokemon_Data['Alt_ID'], $Pokemon_Data['Type']); // Already returns escaped URLs
+
+      // Ensure Item_Name used in Item_Icon path is URL-safe or use a dedicated safe filename.
+      // For now, assume Item_Name is simple or FetchItemData would provide a safe icon path.
+      // If Item_Data exists, its 'Name' should be escaped if displayed directly.
+      $Item_Name_Escaped = (!empty($Item_Data) && isset($Item_Data['Item_Name'])) ? htmlspecialchars($Item_Data['Item_Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : null;
+      $Item_Icon_Path = null;
+      if (!empty($Item_Data) && isset($Item_Data['Item_Name'])) {
+          // Constructing URL needs care. If Item_Name can have special chars, this could be an issue.
+          // However, GetSprites now escapes its output. Item_Icon should follow same pattern or be pre-escaped.
+          // For consistency, let's assume Item_Icon path should be escaped.
+          $Item_Icon_Path = htmlspecialchars(DOMAIN_SPRITES . '/Items/' . $Item_Data['Item_Name'] . '.png', ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      }
+
 
       return [
-        'ID' => $Pokemon_Data['ID'], 'Pokedex_ID' => $Pokemon_Data['Pokedex_ID'], 'Alt_ID' => $Pokemon_Data['Alt_ID'],
-        'Nickname' => $Pokemon_Data['Nickname'], 'Display_Name' => $Display_Name, 'Name' => $Pokemon_Data['Name'],
-        'Type' => $Pokemon_Data['Type'], 'Location' => $Pokemon_Data['Location'], 'Slot' => $Pokemon_Data['Slot'],
-        'Item' => (!empty($Item_Data) ? $Item_Data['Item_Name'] : null), 'Item_ID' => (!empty($Item_Data) ? $Item_Data['Item_ID'] : null),
-        'Item_Icon' => (!empty($Item_Data) ? DOMAIN_SPRITES . '/Items/' . $Item_Data['Item_Name'] . '.png' : null),
-        'Gender' => $Pokemon_Data['Gender'], 'Gender_Short' => $Gender_Short, 'Gender_Icon' => DOMAIN_SPRITES . '/Assets/' . $Pokemon_Data['Gender'] . '.svg',
-        'Level' => number_format(self::FetchLevel($Pokemon_Data['Experience'], 'Pokemon')), 'Level_Raw' => self::FetchLevel($Pokemon_Data['Experience'], 'Pokemon'),
-        'Experience' => number_format($Pokemon_Data['Experience']), 'Experience_Raw' => $Pokemon_Data['Experience'],
-        'Height' => ($Pokedex_Data['Height'] / 10), 'Weight' => ($Pokedex_Data['Weight'] / 10),
-        'Type_Primary' => $Pokedex_Data['Type_Primary'], 'Type_Secondary' => $Pokedex_Data['Type_Secondary'],
-        'Ability' => $Pokemon_Data['Ability'], 'Nature' => $Pokemon_Data['Nature'],
-        'Stats' => $Stats, 'IVs' => explode(',', $Pokemon_Data['IVs']), 'EVs' => explode(',', $Pokemon_Data['EVs']),
-        'Move_1' => $Pokemon_Data['Move_1'], 'Move_2' => $Pokemon_Data['Move_2'], 'Move_3' => $Pokemon_Data['Move_3'], 'Move_4' => $Pokemon_Data['Move_4'],
-        'Frozen' => $Pokemon_Data['Frozen'], 'Happiness' => $Pokemon_Data['Happiness'], 'Exp_Yield' => $Pokedex_Data['Exp_Yield'],
+        'ID' => (int)$Pokemon_Data['ID'],
+        'Pokedex_ID' => (int)$Pokemon_Data['Pokedex_ID'],
+        'Alt_ID' => (int)$Pokemon_Data['Alt_ID'],
+        'Nickname' => htmlspecialchars($Pokemon_Data['Nickname'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Display_Name' => $Display_Name_Escaped, // Already escaped
+        'Name' => $Pokedex_Data['Name'], // This is already escaped from GetPokedexData
+        'Type' => htmlspecialchars($Pokemon_Data['Type'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Location' => htmlspecialchars($Pokemon_Data['Location'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Slot' => (int)$Pokemon_Data['Slot'],
+        'Item' => $Item_Name_Escaped, // Item name, escaped
+        'Item_ID' => !empty($Item_Data) ? (int)$Item_Data['Item_ID'] : null,
+        'Item_Icon' => $Item_Icon_Path, // Item icon path, escaped
+        'Gender' => htmlspecialchars($Pokemon_Data['Gender'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Gender_Short' => htmlspecialchars($Gender_Short, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Gender_Icon' => htmlspecialchars(DOMAIN_SPRITES . '/Assets/' . $Pokemon_Data['Gender'] . '.svg', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Level' => number_format(self::FetchLevel((int)$Pokemon_Data['Experience'], 'Pokemon')),
+        'Level_Raw' => self::FetchLevel((int)$Pokemon_Data['Experience'], 'Pokemon'),
+        'Experience' => number_format($Pokemon_Data['Experience']),
+        'Experience_Raw' => (int)$Pokemon_Data['Experience'],
+        'Height' => ($Pokedex_Data['Height'] / 10), // Numeric
+        'Weight' => ($Pokedex_Data['Weight'] / 10), // Numeric
+        'Type_Primary' => $Pokedex_Data['Type_Primary'], // Already escaped from GetPokedexData
+        'Type_Secondary' => $Pokedex_Data['Type_Secondary'], // Already escaped from GetPokedexData
+        'Ability' => htmlspecialchars($Pokemon_Data['Ability'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Nature' => htmlspecialchars($Pokemon_Data['Nature'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Stats' => $Stats, // Array of numbers
+        'IVs' => explode(',', $Pokemon_Data['IVs']), // Array of numbers (strings initially, but usually treated as numbers)
+        'EVs' => explode(',', $Pokemon_Data['EVs']), // Array of numbers
+        'Move_1' => (int)$Pokemon_Data['Move_1'],
+        'Move_2' => (int)$Pokemon_Data['Move_2'],
+        'Move_3' => (int)$Pokemon_Data['Move_3'],
+        'Move_4' => (int)$Pokemon_Data['Move_4'],
+        'Frozen' => (int)$Pokemon_Data['Frozen'],
+        'Happiness' => (int)$Pokemon_Data['Happiness'],
+        'Exp_Yield' => $Pokedex_Data['Exp_Yield'], // Numeric from GetPokedexData
         'Can_Evolve' => ($Can_Evolve_Count > 0),
-        'Owner_Current' => $Pokemon_Data['Owner_Current'], 'Owner_Original' => $Pokemon_Data['Owner_Original'],
-        'Trade_Interest' => $Pokemon_Data['Trade_Interest'], 'Challenge_Status' => $Pokemon_Data['Challenge_Status'],
-        'Biography' => $Pokemon_Data['Biography'], 'Creation_Date' => date('M j, Y (g:i A)', $Pokemon_Data['Creation_Date']),
-        'Creation_Location' => $Pokemon_Data['Creation_Location'],
-        'Sprite' => $Poke_Images['Sprite'], 'Icon' => $Poke_Images['Icon'],
+        'Owner_Current' => (int)$Pokemon_Data['Owner_Current'],
+        'Owner_Original' => (int)$Pokemon_Data['Owner_Original'],
+        'Trade_Interest' => htmlspecialchars($Pokemon_Data['Trade_Interest'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Challenge_Status' => htmlspecialchars($Pokemon_Data['Challenge_Status'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Biography' => htmlspecialchars($Pokemon_Data['Biography'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Creation_Date' => htmlspecialchars(date('M j, Y (g:i A)', (int)$Pokemon_Data['Creation_Date']), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Creation_Location' => htmlspecialchars($Pokemon_Data['Creation_Location'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Sprite' => $Poke_Images['Sprite'], // Already escaped by GetSprites
+        'Icon' => $Poke_Images['Icon'],     // Already escaped by GetSprites
       ];
     }
 
-    public function GetSprites($Pokedex_ID, $Alt_ID = 0, $Type = 'Normal')
+    /**
+     * Generates paths for a Pokémon's sprite and icon.
+     * Includes logic to fall back to normal sprites/icons if specific type (e.g., Shiny) is not found.
+     *
+     * @param int $Pokedex_ID The Pokedex ID of the Pokémon.
+     * @param int $Alt_ID The alternate form ID of the Pokémon. Defaults to 0.
+     * @param string $Type The type of the Pokémon (e.g., Normal, Shiny). Defaults to "Normal".
+     * @return array|false Associative array with 'Icon' and 'Sprite' paths, or false on error.
+     */
+    public function GetSprites(int $Pokedex_ID, int $Alt_ID = 0, string $Type = 'Normal')
     {
-      global $Dir_Root;
+      global $Dir_Root; // Used for file_exists checks, consider injecting a base path if possible in future.
 
       try
       {
@@ -430,19 +567,45 @@
         }
       }
 
-      return [ 'Icon' => $Icon, 'Sprite' => $Sprite ];
+      return [
+        'Icon' => htmlspecialchars($Icon, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'Sprite' => htmlspecialchars($Sprite, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+      ];
     }
 
-    public function GenerateAbility($Pokedex_ID, $Alt_ID)
+    /**
+     * Randomly generates an ability for a Pokémon based on its possible abilities.
+     * Prioritizes Hidden Ability by a 1/50 chance if available.
+     *
+     * @param int $Pokedex_ID The Pokedex ID of the Pokémon.
+     * @param int $Alt_ID The alternate form ID of the Pokémon.
+     * @return string|false The name of the generated ability, or false if abilities can't be fetched.
+     */
+    public function GenerateAbility(int $Pokedex_ID, int $Alt_ID)
     {
       $Abilities = $this->GetAbilities($Pokedex_ID, $Alt_ID);
       if ( !$Abilities ) return false;
-      if ( !empty($Abilities['Hidden_Ability']) && mt_rand(1, 50) == 1 ) return $Abilities['Hidden_Ability'];
-      if ( empty($Abilities['Ability_2']) ) return $Abilities['Ability_1'];
+
+      // Check for Hidden Ability first (e.g., 1/50 chance)
+      if ( !empty($Abilities['Hidden_Ability']) && mt_rand(1, 50) == 1 )
+        return $Abilities['Hidden_Ability'];
+
+      // If no Hidden Ability, or didn't roll for it, choose between Ability_1 and Ability_2
+      if ( empty($Abilities['Ability_2']) )
+        return $Abilities['Ability_1']; // Only Ability_1 exists
+
+      // Randomly pick between Ability_1 and Ability_2
       return (mt_rand(1, 2) == 1) ? $Abilities['Ability_1'] : $Abilities['Ability_2'];
     }
 
-    public function GenerateGender($Pokedex_ID, $Alt_ID = 0)
+    /**
+     * Generates a gender for a Pokémon based on its species' gender ratio.
+     *
+     * @param int $Pokedex_ID The Pokedex ID of the Pokémon.
+     * @param int $Alt_ID The alternate form ID of the Pokémon. Defaults to 0.
+     * @return string|false The generated gender ('Female', 'Male', 'Genderless') or false on error.
+     */
+    public function GenerateGender(int $Pokedex_ID, int $Alt_ID = 0)
     {
       try
       {
@@ -469,7 +632,15 @@
       return $Weighter->GetObject();
     }
 
-    public function MovePokemon($Pokemon_ID, $User_ID, $Slot = 7)
+    /**
+     * Moves a Pokémon to a different slot or location (Roster/Box).
+     *
+     * @param int $Pokemon_ID The ID of the Pokémon to move.
+     * @param int $User_ID The ID of the user owning the Pokémon.
+     * @param int $Slot The target slot (1-6 for Roster, 7 for Box default). Defaults to 7.
+     * @return array An associative array with 'Message' and 'Type' (success/error).
+     */
+    public function MovePokemon(int $Pokemon_ID, int $User_ID, int $Slot = 7)
     {
       try
       {
@@ -543,12 +714,24 @@
       return ['Message' => $Move_Message, 'Type' => 'success'];
     }
 
-    public function ReleasePokemon($Pokemon_ID, $User_ID, $Staff_Panel_Deletion = false)
+    /**
+     * Releases a Pokémon, moving its data to the 'released' table and deleting it from 'pokemon'.
+     *
+     * @param int $Pokemon_ID The ID of the Pokémon to release.
+     * @param int $User_ID The ID of the user releasing the Pokémon.
+     * @param bool $Staff_Panel_Deletion If true, bypasses ownership check (for staff actions). Defaults to false.
+     * @return array An associative array with 'Type' (success/error) and 'Message'.
+     */
+    public function ReleasePokemon(int $Pokemon_ID, int $User_ID, bool $Staff_Panel_Deletion = false)
     {
       $Pokemon = $this->GetPokemonData($Pokemon_ID);
 
-      if ( !$Pokemon ) return ['Type' => 'error', 'Message' => 'This Pok&eacute;mon does not exist.'];
-      if ( $Pokemon['Owner_Current'] != $User_ID && !$Staff_Panel_Deletion) return ['Type' => 'error', 'Message' => 'You may not release a Pok&eacute;mon that does not belong to you.'];
+      if ( !$Pokemon )
+        return ['Type' => 'error', 'Message' => 'This Pok&eacute;mon does not exist.'];
+
+      // Ownership check, bypassed if staff is deleting
+      if ( $Pokemon['Owner_Current'] != $User_ID && !$Staff_Panel_Deletion)
+        return ['Type' => 'error', 'Message' => 'You may not release a Pok&eacute;mon that does not belong to you.'];
 
       try
       {
@@ -568,6 +751,12 @@
       return ['Type' => 'success', 'Message' => "You have successfully released {$Pokemon['Display_Name']}."];
     }
 
+    /**
+     * Fetches basic information for all Pokémon a user can release (in Box, not frozen).
+     *
+     * @param int $UserID The ID of the user.
+     * @return array An associative array with 'Amount' and 'Pokemon' list (ID, Display_Name, Gender, Level_Raw).
+     */
     public function GetUserReleasablePokemonIDsAndBasicInfo(int $UserID)
     {
       $Releasable_Pokemon_With_Info = [];
@@ -609,6 +798,13 @@
       ];
     }
 
+    /**
+     * Checks if a specific Pokémon is owned by a specific user.
+     *
+     * @param int $PokemonID The ID of the Pokémon.
+     * @param int $UserID The ID of the user.
+     * @return bool True if the user owns the Pokémon, false otherwise.
+     */
     public function CheckPokemonOwnership(int $PokemonID, int $UserID)
     {
       try
@@ -629,6 +825,11 @@
       }
     }
 
+    /**
+     * Fetches all moves marked as 'Usable'.
+     *
+     * @return array|false An array of usable moves (ID, Name) or false on error.
+     */
     public function GetAllUsableMoves()
     {
       try
@@ -645,9 +846,19 @@
       }
     }
 
+    /**
+     * Updates a specific move slot for a Pokémon.
+     * Prevents duplicate moves unless one of them is 0 (empty move).
+     *
+     * @param int $PokemonID The ID of the Pokémon.
+     * @param int $UserID The ID of the user owning the Pokémon.
+     * @param int $MoveSlotNumber The move slot to update (1-4).
+     * @param int $NewMoveID The ID of the new move to learn (0 to forget).
+     * @return array An associative array with 'Success' (bool) and 'Message' (string).
+     */
     public function UpdatePokemonMoveSlot(int $PokemonID, int $UserID, int $MoveSlotNumber, int $NewMoveID)
     {
-      if ( !in_array($MoveSlotNumber, [1, 2, 3, 4]) ) {
+      if ( !in_array($MoveSlotNumber, [1, 2, 3, 4], true) ) { // Strict check for in_array
         return ['Success' => false, 'Message' => 'Invalid move slot.'];
       }
 
@@ -703,12 +914,17 @@
       }
     }
 
+    /**
+     * Updates the nickname of a Pokémon.
+     *
+     * @param int $PokemonID The ID of the Pokémon.
+     * @param int $UserID The ID of the user owning the Pokémon.
+     * @param string|null $Nickname The new nickname. If null or empty, the nickname is removed.
+     * @return array An associative array with 'Success' (bool) and 'Message' (string).
+     */
     public function UpdatePokemonNickname(int $PokemonID, int $UserID, ?string $Nickname)
     {
-      $Pokemon = $this->GetPokemonData($PokemonID); // This already checks ownership via its own logic if GetPokemonData is called with UserID context or if it implicitly uses a session UserID.
-                                                  // However, the current GetPokemonData doesn't take UserID for an ownership check.
-                                                  // It's better to explicitly check ownership first.
-
+      // Explicitly check ownership first.
       $Is_Owner = $this->CheckPokemonOwnership($PokemonID, $UserID);
       if (!$Is_Owner)
       {
@@ -718,17 +934,13 @@
         ];
       }
 
-      // Re-fetch Pokemon data if needed, or use data from CheckPokemonOwnership if it returned the row.
-      // For simplicity, let's assume $Pokemon (if fetched after ownership check) is valid.
-      // If $Pokemon was from before ownership check, it might be for a different user's pokemon if ID is reused.
-      // Safest is to re-fetch or ensure CheckPokemonOwnership returns the data.
-      // For now, we'll rely on the earlier GetPokemonData and the subsequent ownership check.
-      // This means $Pokemon might not be needed if we just need Display_Name for the message.
-      // Let's get Display_Name before updating.
+      // Fetch minimal data for the message, or use a placeholder if GetPokemonData is too heavy here.
+      // For now, let's fetch it to get an accurate display name.
+      $PokemonForMessage = $this->GetPokemonData($PokemonID);
 
-      $PokemonForMessage = $Pokemon; // Use already fetched data for message
-
-      $Nickname_To_Set = (empty($Nickname) || $Nickname == '') ? null : Purify($Nickname); // Purify nickname here
+      // Sanitize the nickname. Purify allows for some characters but strips dangerous ones.
+      // Max length should be enforced by DB schema or here.
+      $Nickname_To_Set = (empty($Nickname) || trim($Nickname) === '') ? null : Purify(trim($Nickname));
 
       try
       {
@@ -771,26 +983,45 @@
     }
 
 
-    // Static helper methods (no $this->pdo needed)
-    public static function CalculateStat($Stat_Name, $Base_Stat_Value, $Pokemon_Level, $Pokemon_Stat_IV, $Pokemon_Stat_EV, $Pokemon_Nature)
+    /**
+     * Calculates a Pokémon's stat based on its base value, level, IV, EV, and nature.
+     * This is a static helper method.
+     *
+     * @param string $Stat_Name The name of the stat (e.g., 'HP', 'Attack').
+     * @param int $Base_Stat_Value The base stat value for the species.
+     * @param int $Pokemon_Level The Pokémon's current level.
+     * @param int $Pokemon_Stat_IV The Pokémon's IV for this stat.
+     * @param int $Pokemon_Stat_EV The Pokémon's EV for this stat.
+     * @param string $Pokemon_Nature The Pokémon's nature.
+     * @return int The calculated stat value.
+     */
+    public static function CalculateStat(string $Stat_Name, int $Base_Stat_Value, int $Pokemon_Level, int $Pokemon_Stat_IV, int $Pokemon_Stat_EV, string $Pokemon_Nature): int
     {
-      $Pokemon_Level = $Pokemon_Level < 1 ? 1 : $Pokemon_Level;
-      $Pokemon_Stat_IV = $Pokemon_Stat_IV > 31 ? 31 : $Pokemon_Stat_IV;
-      $Pokemon_Stat_EV = $Pokemon_Stat_EV > 252 ? 252 : $Pokemon_Stat_EV;
+      // Basic validation/clamping
+      $Pokemon_Level = max(1, $Pokemon_Level);
+      $Pokemon_Stat_IV = max(0, min(31, $Pokemon_Stat_IV));
+      $Pokemon_Stat_EV = max(0, min(252, $Pokemon_Stat_EV));
 
       if ( $Stat_Name == 'HP' ) {
         if ( $Base_Stat_Value == 1 ) return 1; // Shedinja case
         return floor((((2 * $Base_Stat_Value + $Pokemon_Stat_IV + ($Pokemon_Stat_EV / 4)) * $Pokemon_Level) / 100) + $Pokemon_Level + 10);
       } else {
-        $Nature_Data = self::Natures()[$Pokemon_Nature];
-        $Nature_Bonus = 1;
+        $Nature_Data = self::Natures()[$Pokemon_Nature] ?? ['Plus' => null, 'Minus' => null]; // Default if nature not found
+        $Nature_Bonus = 1.0;
         if (isset($Nature_Data['Plus']) && $Nature_Data['Plus'] == $Stat_Name ) $Nature_Bonus = 1.1;
         else if (isset($Nature_Data['Minus']) && $Nature_Data['Minus'] == $Stat_Name ) $Nature_Bonus = 0.9;
+
         return floor(((((2 * $Base_Stat_Value + $Pokemon_Stat_IV + ($Pokemon_Stat_EV / 4)) * $Pokemon_Level) / 100) + 5) * $Nature_Bonus);
       }
     }
 
-    public static function Natures()
+    /**
+     * Returns an array of natures and their stat modifications.
+     * This is a static helper method.
+     *
+     * @return array Associative array of natures.
+     */
+    public static function Natures(): array
     {
       return [
         'Adamant' => ['Plus' => 'Attack', 'Minus' => 'SpAttack'], 'Brave' => ['Plus' => 'Attack', 'Minus' => 'Speed'],
@@ -809,14 +1040,244 @@
       ];
     }
 
-    public static function GenerateNature()
+    /**
+     * Generates a random nature.
+     * This is a static helper method.
+     *
+     * @return string A random nature name.
+     */
+    public static function GenerateNature(): string
     {
       $Nature_Keys = array_keys(self::Natures());
       return $Nature_Keys[mt_rand(0, count($Nature_Keys) - 1)];
     }
 
-    public static function FetchLevel($Current_Exp, $Type) { global $Pokemon_Exp_Needed; if (isset($Pokemon_Exp_Needed[$Type])) { foreach ($Pokemon_Exp_Needed[$Type] as $Lvl => $Exp) { if ( $Current_Exp >= $Exp ) { continue; } else { return $Lvl - 1; } } } return 1; }
-    public static function FetchExperience($Level, $Type) { global $Pokemon_Exp_Needed; if (isset($Pokemon_Exp_Needed[$Type][$Level])) { return $Pokemon_Exp_Needed[$Type][$Level]; } return 1; }
+    /**
+     * Fetches the level for a given experience amount and type (Pokemon/Trainer).
+     * Relies on global $Pokemon_Exp_Needed.
+     * This is a static helper method.
+     *
+     * @param int $Current_Exp The current experience points.
+     * @param string $Type The type of entity ('Pokemon' or 'Trainer').
+     * @return int The calculated level.
+     */
+    public static function FetchLevel(int $Current_Exp, string $Type): int
+    {
+      global $Pokemon_Exp_Needed;
+      if (isset($Pokemon_Exp_Needed[$Type])) {
+        foreach ($Pokemon_Exp_Needed[$Type] as $Lvl => $Exp) {
+          if ( $Current_Exp >= $Exp ) {
+            continue;
+          } else {
+            return $Lvl - 1;
+          }
+        }
+      }
+      return 1; // Default to level 1 if type or exp not found
+    }
+
+    /**
+     * Fetches the experience needed for a specific level and type.
+     * Relies on global $Pokemon_Exp_Needed.
+     * This is a static helper method.
+     *
+     * @param int $Level The desired level.
+     * @param string $Type The type of entity ('Pokemon' or 'Trainer').
+     * @return int The experience points needed for that level.
+     */
+    public static function FetchExperience(int $Level, string $Type): int
+    {
+      global $Pokemon_Exp_Needed;
+      if (isset($Pokemon_Exp_Needed[$Type][$Level])) {
+        return $Pokemon_Exp_Needed[$Type][$Level];
+      }
+      return 1; // Default if not found
+    }
+
+    /**
+     * Heals all Pokémon in a user's roster to full HP and removes status conditions.
+     *
+     * @param int $UserID The ID of the user whose roster Pokémon are to be healed.
+     * @return array An associative array with 'Success' (bool) and 'Message' (string).
+     */
+    public function HealRosterPokemon(int $UserID): array
+    {
+      try
+      {
+        $this->pdo->beginTransaction();
+
+        // Fetch roster Pokemon IDs
+        $Fetch_Roster_IDs = $this->pdo->prepare("SELECT `ID` FROM `pokemon` WHERE `Owner_Current` = ? AND `Location` = 'Roster'");
+        $Fetch_Roster_IDs->execute([$UserID]);
+        $Roster_Pokemon_IDs = $Fetch_Roster_IDs->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($Roster_Pokemon_IDs)) {
+          $this->pdo->commit(); // Nothing to heal
+          return ['Success' => true, 'Message' => 'No Pok&eacute;mon in roster to heal.'];
+        }
+
+        // Heal each Pokemon
+        foreach ($Roster_Pokemon_IDs as $Pokemon_ID) {
+          $Current_Stats = $this->GetCurrentStats((int)$Pokemon_ID);
+          if ($Current_Stats && isset($Current_Stats[0])) { // Index 0 is HP
+            $Max_HP = $Current_Stats[0];
+
+            // Update HP and clear status conditions
+            // Assuming common status column names. Adjust if schema is different.
+            $Update_Pokemon = $this->pdo->prepare("
+              UPDATE `pokemon`
+              SET
+                `HP_Current` = ?,
+                `Status_Effect` = NULL,
+                `Status_Sleep_Turns` = 0,
+                `Status_Toxic_Turns` = 0
+                /* Add other status columns here if they exist, like `Status_Burn_Turns`, `Status_Freeze_Turns`, `Status_Paralysis_Turns` */
+              WHERE `ID` = ?
+            ");
+            $Update_Pokemon->execute([$Max_HP, $Pokemon_ID]);
+          }
+        }
+
+        $this->pdo->commit();
+        return ['Success' => true, 'Message' => 'All Pok&eacute;mon in your roster have been healed!'];
+      }
+      catch (PDOException $e)
+      {
+        if ($this->pdo->inTransaction()) {
+          $this->pdo->rollBack();
+        }
+        HandleError($e);
+        return ['Success' => false, 'Message' => 'An error occurred while healing your Pok&eacute;mon.'];
+      }
+    }
+
+    /**
+     * Fetches a paginated list of Pokémon from a user's PC Box.
+     *
+     * @param int $UserID The ID of the user.
+     * @param int $Page The current page number for pagination. Defaults to 1.
+     * @param int $Items_Per_Page The number of items to display per page. Defaults to 30.
+     * @return array An associative array containing the list of Pokémon, total count, and pagination details.
+     *               Includes an 'error' key if a database error occurs.
+     */
+    public function FetchBoxPokemon(int $UserID, int $Page = 1, int $Items_Per_Page = 30): array
+    {
+      // Sanitize pagination parameters
+      $Page = max(1, $Page);
+      $Items_Per_Page = max(1, $Items_Per_Page);
+      $Offset = ($Page - 1) * $Items_Per_Page;
+
+      $pokemon_list = [];
+      $total_pokemon = 0;
+
+      try {
+        // Get total count of Pokémon in the user's box
+        $Count_Query = $this->pdo->prepare("SELECT COUNT(*) FROM `pokemon` WHERE `Owner_Current` = ? AND `Location` = 'Box'");
+        $Count_Query->execute([$UserID]);
+        $total_pokemon = (int)$Count_Query->fetchColumn();
+
+        if ($total_pokemon > 0) {
+          // Fetch paginated Pokemon IDs from the box
+          $Fetch_IDs = $this->pdo->prepare("
+            SELECT `ID`
+            FROM `pokemon`
+            WHERE `Owner_Current` = ? AND `Location` = 'Box'
+            ORDER BY `ID` ASC  -- Or some other meaningful order like Pokedex_ID, Slot, etc.
+            LIMIT :limit OFFSET :offset
+          ");
+          $Fetch_IDs->bindValue(':limit', $Items_Per_Page, PDO::PARAM_INT);
+          $Fetch_IDs->bindValue(':offset', $Offset, PDO::PARAM_INT);
+          $Fetch_IDs->bindValue(1, $UserID, PDO::PARAM_INT); // Assuming unnamed placeholder for UserID from original query structure
+          $Fetch_IDs->execute();
+          $Pokemon_IDs = $Fetch_IDs->fetchAll(PDO::FETCH_COLUMN);
+
+          // Get full data for each fetched Pokémon ID
+          foreach ($Pokemon_IDs as $pokemon_id) {
+            $pokemon_data = $this->GetPokemonData((int)$pokemon_id);
+            if ($pokemon_data) {
+              $pokemon_list[] = $pokemon_data;
+            }
+          }
+        }
+      } catch (PDOException $e) {
+        HandleError($e);
+        // Return error state
+        return [
+          'pokemon' => [],
+          'total_pokemon' => 0,
+          'current_page' => $Page,
+          'items_per_page' => $Items_Per_Page,
+          'error' => 'A database error occurred while fetching box Pokémon.'
+        ];
+      }
+
+      return [
+        'pokemon' => $pokemon_list,
+        'total_pokemon' => $total_pokemon,
+        'current_page' => $Page,
+        'items_per_page' => $Items_Per_Page,
+      ];
+    }
+
+    /**
+     * Fetches the user's roster Pokémon along with detailed information about their current moves.
+     * Ensures that data intended for display (like Pokémon names, move names) is HTML-escaped.
+     *
+     * @param int $UserID The ID of the user whose roster to fetch.
+     * @return array An array of Pokémon data, where each Pokémon includes a 'Move_Data' key
+     *               containing details for its learned moves. Returns empty array on failure or no roster.
+     */
+    public function GetUserRosterWithDetailedMoves(int $UserID): array
+    {
+      if ($UserID <= 0) {
+        return [];
+      }
+
+      $roster_pokemon_data = [];
+      try {
+        $stmt = $this->pdo->prepare("
+          SELECT `ID`, `Move_1`, `Move_2`, `Move_3`, `Move_4`
+          FROM `pokemon`
+          WHERE `Owner_Current` = ? AND `Location` = 'Roster'
+          ORDER BY `Slot` ASC
+          LIMIT 6
+        ");
+        $stmt->execute([$UserID]);
+        $roster_slots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($roster_slots as $roster_slot) {
+          $pokemon_detail = $this->GetPokemonData((int)$roster_slot['ID']);
+          if (!$pokemon_detail) {
+            // Placeholder for empty/invalid slot if needed by JS, or skip
+            $roster_pokemon_data[] = null; // Or some default structure for an empty slot
+            continue;
+          }
+
+          $pokemon_detail['Move_Data'] = [];
+          $move_ids = [
+            1 => $roster_slot['Move_1'],
+            2 => $roster_slot['Move_2'],
+            3 => $roster_slot['Move_3'],
+            4 => $roster_slot['Move_4'],
+          ];
+
+          foreach ($move_ids as $slot_num => $move_id) {
+            if ($move_id > 0) {
+              $move_data = $this->GetMoveData((int)$move_id);
+              $pokemon_detail['Move_Data'][(string)$slot_num] = $move_data ? $move_data : ['Name' => 'Empty', 'ID' => 0]; // GetMoveData now escapes Name
+            } else {
+              $pokemon_detail['Move_Data'][(string)$slot_num] = ['Name' => 'Empty', 'ID' => 0];
+            }
+          }
+          $roster_pokemon_data[] = $pokemon_detail;
+        }
+      } catch (PDOException $e) {
+        HandleError($e);
+        return []; // Return empty array on error
+      }
+
+      return $roster_pokemon_data;
+    }
   }
 
 [end of app/core/classes/pokemon_service.php]

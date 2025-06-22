@@ -3,15 +3,15 @@
 
   $Log_Type = 'Pokemon';
   if ( !empty($_GET['Log_Type']) && in_array($_GET['Log_Type'], ['Battle', 'Map', 'Trade', 'Shop', 'Login']) )
-    $Log_Type = Purify($_GET['Log_Type']);
+    $Log_Type = Purify($_GET['Log_Type']); // Whitelisted string, Purify is acceptable
 
-  $User = 1;
+  $User = 1; // Default User ID
   if ( !empty($_GET['Log_User']) )
-    $User = Purify($_GET['Log_User']);
+    $User = (int)$_GET['Log_User'];
 
-  $Log_Limit = 2000;
+  $Log_Limit = 2000; // Default Log Limit
   if ( !empty($_GET['Log_Limit']) )
-    $Log_Limit = Purify($_GET['Log_Limit']);
+    $Log_Limit = (int)$_GET['Log_Limit'];
 
   $User_Info = $User_Class->FetchUserData($User);
   if ( !$User_Info )

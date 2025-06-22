@@ -53,8 +53,24 @@
 		return;
 	}
 
-	$Action = Purify($_POST['Action']);
-	$Type = Purify($_POST['Type']);
+	$allowed_actions = ['Add', 'Remove'];
+	$allowed_types = ['Pokemon', 'Item', 'Currency'];
+
+	$Action_Input = $_POST['Action'] ?? '';
+	$Type_Input = $_POST['Type'] ?? '';
+
+	if (!in_array($Action_Input, $allowed_actions, true)) {
+		echo "<tr><td colspan='3'>Invalid action specified.</td></tr>";
+		return;
+	}
+	$Action = $Action_Input;
+
+	if (!in_array($Type_Input, $allowed_types, true)) {
+		echo "<tr><td colspan='3'>Invalid type specified.</td></tr>";
+		return;
+	}
+	$Type = $Type_Input;
+
 	$User_ID = (int)($_POST['ID']); // User whose items are being manipulated
 
 	// $Data purification depends on $Type

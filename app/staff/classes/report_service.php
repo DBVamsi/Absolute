@@ -1,10 +1,23 @@
 <?php
+/**
+ * Service class for managing user reports and staff actions related to them.
+ */
   class ReportService
   {
+    /** @var PDO */
     private $pdo;
+    /** @var User */
     private $userService;
+    /** @var StaffLogService */
     private $staffLogService;
 
+    /**
+     * Constructor for ReportService.
+     *
+     * @param PDO $pdo The PDO database connection object.
+     * @param User $userService Instance of the User service for fetching user data.
+     * @param StaffLogService $staffLogService Instance of the StaffLog service for logging actions.
+     */
     public function __construct(PDO $pdo, User $userService, StaffLogService $staffLogService)
     {
       $this->pdo = $pdo;
@@ -13,12 +26,15 @@
     }
 
     /**
-     * Fetch a report by its ID to check if it exists.
-     * @param int $Report_ID
-     * @return array|false
+     * Fetches a specific report by its ID to check for its existence.
+     *
+     * @param int $Report_ID The ID of the report to check.
+     * @return array|false The report data as an associative array if found, otherwise false.
      */
     public function CheckReportExistence(int $Report_ID)
     {
+      if ($Report_ID <= 0) return false; // Basic validation
+
       try
       {
         $Fetch_Report = $this->pdo->prepare("SELECT * FROM `reports` WHERE `ID` = ? LIMIT 1");
@@ -34,9 +50,11 @@
     }
 
     /**
-     * Fetch all active reports.
+     * Fetches all currently active reports, ordered by timestamp.
+     *
+     * @return array|false An array of active report data, or false on database error.
      */
-    public function GetActiveReports()
+    public function GetActiveReports(): array|false
     {
       try
       {
@@ -53,10 +71,15 @@
     }
 
     /**
-     * Display all active reports.
-     * @param array $Active_Reports
+     * Generates an HTML string displaying all active reports.
+     * Output is intended to be used within a JSON response for AJAX calls.
+     * Usernames are pre-formatted HTML from UserService::DisplayUsername.
+     * Report messages are Purify'd. Dates are htmlspecialchar'd.
+     *
+     * @param array $Active_Reports An array of active report data, typically from GetActiveReports().
+     * @return string HTML string representing the table of active reports, or a message if none exist.
      */
-    public function ShowActiveReports(array $Active_Reports)
+    public function ShowActiveReports(array $Active_Reports): string
     {
       if ( empty($Active_Reports) )
       {
@@ -90,10 +113,11 @@
             $Handler_Username = $Handler_Data ? $this->userService->DisplayUsername($Report['Handler'], false, false, true) : "Unknown User";
           }
 
-          $Message_Content = Purify($Report['Message']);
+          $Message_Content = Purify($Report['Message']); // Assuming Purify makes it safe for HTML echo
+          $Formatted_Timestamp = htmlspecialchars(date('M d, Y H:i:s', $Report['Timestamp']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
           $Report_List_Text .= "
-            <table class_TAG='border-gradient' style='width: 800px;'>
+            <table class='border-gradient' style='width: 800px;'>
               <thead>
                 <tr>
                   <th colspan='1' style='width: 25%;'>
@@ -106,7 +130,7 @@
                     Handler: {$Handler_Username}
                   </th>
                   <th colspan='1' style='width: 25%;'>
-                    " . date('M d, Y H:i:s', $Report['Timestamp']) . "
+                    {$Formatted_Timestamp}
                   </th>
                 </tr>
               </thead>
@@ -135,13 +159,15 @@
     }
 
     /**
-     * Delete a report.
-     * @param int $Report_ID
-     * @param int $actingStaffUserId
+     * Deletes a specific report from the database and logs the action.
+     *
+     * @param int $Report_ID The ID of the report to delete.
+     * @param int $actingStaffUserId The ID of the staff member performing the deletion.
+     * @return array An associative array with 'Success' (bool) and 'Message' (string).
      */
-    public function DeleteReport(int $Report_ID, int $actingStaffUserId)
+    public function DeleteReport(int $Report_ID, int $actingStaffUserId): array
     {
-      if ( !$Report_ID )
+      if ( !$Report_ID || $Report_ID <= 0) // Basic validation
       {
         return [
           'Success' => false,

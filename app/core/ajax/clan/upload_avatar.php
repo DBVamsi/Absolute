@@ -42,102 +42,103 @@
 
       if ( file_exists($Avatar_File['tmp_name']) && is_uploaded_file($Avatar_File['tmp_name']) )
       {
-        $Avatar_Metadata = getimagesize($Avatar_File["tmp_name"]);
-        $Errors_Upload = null; // Use a different variable name for upload specific errors
+        $Errors_Upload = "";
+        $Validated_Mime_Type = null;
 
-        if ( !$Avatar_Metadata ) // Check if getimagesize failed (not a valid image)
-        {
-          $Errors_Upload .= "
-            <div>
-              <b style='color: #ff0000;'>
-                Uploaded file is not a valid image.
-              </b>
-            </div>
-          ";
+        // Check file size first (1MB limit)
+        if ( $Avatar_File['size'] > 1024000 ) {
+          $Errors_Upload .= "<div><b style='color: #ff0000;'>Submitted avatars must be less than 1MB in size.</b></div>";
         }
-        else
-        {
-          if ( $Avatar_Metadata[0] > 200 || $Avatar_Metadata[1] > 200 )
-          {
-            $Errors_Upload .= "
-              <div>
-                <b style='color: #ff0000;'>
-                  Your sprite exceeds the allowed size dimensions (200x200).
-                </b>
-              </div>
-            ";
-          }
 
-          if ( !in_array($Avatar_File['type'], ['image/png', 'image/jpeg', 'image/jpg']) ) // Added image/jpg
-          {
-            $Errors_Upload .= "
-              <div>
-                <b style='color: #ff0000;'>
-                  You must submit either a file that has the .png or .jpg extension.
-                </b>
-              </div>
-            ";
-          }
-
-          if ( $Avatar_File['size'] > 1024000 ) // 1MB
-          {
-            $Errors_Upload .= "
-              <div>
-                <b style='color: #ff0000;'>
-                  Submitted avatars must be less than 1MB in size.
-                </b>
-              </div>
-            ";
+        // Server-side MIME type validation
+        if (empty($Errors_Upload)) {
+          $finfo = finfo_open(FILEINFO_MIME_TYPE);
+          $mime_type = finfo_file($finfo, $Avatar_File['tmp_name']);
+          finfo_close($finfo);
+          $allowed_mime_types = ['image/png', 'image/jpeg', 'image/gif'];
+          if (!in_array($mime_type, $allowed_mime_types, true)) {
+            $Errors_Upload .= "<div><b style='color: #ff0000;'>Invalid file type. Allowed types: PNG, JPEG, GIF. (MIME)</b></div>";
+          } else {
+            $Validated_Mime_Type = $mime_type; // Store validated MIME for GD processing
           }
         }
 
-        if ( $Errors_Upload )
-        {
-          $Text = $Errors_Upload;
+        // Strict Extension Validation
+        if (empty($Errors_Upload)) {
+          $filename = $Avatar_File['name'];
+          $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+          $allowed_extensions = ['png', 'jpg', 'jpeg', 'gif'];
+          if (!in_array($extension, $allowed_extensions, true)) {
+            $Errors_Upload .= "<div><b style='color: #ff0000;'>Invalid file extension. Allowed extensions: .png, .jpg, .jpeg, .gif.</b></div>";
+          }
         }
-        else
-        {
-          $New_Filepath = '/Avatars/Clan/' . $Clan_Data['ID'] . '.png'; // Consider making extension dynamic or converting to PNG
 
-          try
-          {
-            // $PDO is available via $this->pdo in $Clan_Class if methods are called on an instance.
-            // However, this script uses $PDO directly. This implies $pdo_instance from session.php should be used.
-            // For now, assuming $PDO is correctly representing $pdo_instance from session.php.
-            // This would be a point of failure if $PDO is not the $pdo_instance.
-            // Correct would be: $Clan_Class->UpdateAvatarPath($Clan_Data['ID'], $New_Filepath); (if such method exists)
-            // Or direct use of $pdo_instance if this script is not part of a class.
-            $Update_Avatar = $pdo_instance->prepare("UPDATE `clans` SET `Avatar` = ? WHERE `ID` = ? LIMIT 1");
-            $Update_Avatar->execute([ $New_Filepath, $Clan_Data['ID'] ]);
-          }
-          catch ( PDOException $e )
-          {
-            HandleError($e);
-            // It's better to set an error message than to just die or do nothing.
-            $Text = "<div><b style='color: #ff0000;'>Database error during avatar update.</b></div>";
-            // To prevent move_uploaded_file if DB fails:
-            $New_Filepath = null; // Clear New_Filepath to prevent using it later if DB failed
-          }
-
-          if ($New_Filepath) { // Only move if DB was successful (or if we decide to move anyway and log DB error)
-            if (move_uploaded_file($Avatar_File['tmp_name'], dirname(__FILE__, 4) . '/images' . $New_Filepath))
-            {
-              $Text = "
-                <div>
-                  <b style='color: #00ff00;'>
-                    The avatar that you have submitted has been uploaded!
-                  </b>
-                </div>
-              ";
-            } else {
-              $Text = "<div><b style='color: #ff0000;'>Failed to move uploaded file.</b></div>";
-              // Potentially revert DB change if file move fails, though this adds complexity.
+        // Image dimensions check (using getimagesize, also confirms it's an image)
+        if (empty($Errors_Upload)) {
+          $Avatar_Metadata = getimagesize($Avatar_File["tmp_name"]);
+          if ( !$Avatar_Metadata ) {
+            $Errors_Upload .= "<div><b style='color: #ff0000;'>Uploaded file is not a valid image or is corrupted.</b></div>";
+          } else {
+            if ( $Avatar_Metadata[0] > 200 || $Avatar_Metadata[1] > 200 ) {
+              $Errors_Upload .= "<div><b style='color: #ff0000;'>Image dimensions must not exceed 200x200 pixels.</b></div>";
             }
           }
         }
-      }
-      else
-      {
+
+        if ( !empty($Errors_Upload) ) {
+          $Text = $Errors_Upload;
+        } else {
+          // Image Re-processing using GD
+          $source_image = null;
+          switch ($Validated_Mime_Type) {
+            case 'image/jpeg':
+              $source_image = @imagecreatefromjpeg($Avatar_File['tmp_name']);
+              break;
+            case 'image/png':
+              $source_image = @imagecreatefrompng($Avatar_File['tmp_name']);
+              break;
+            case 'image/gif':
+              $source_image = @imagecreatefromgif($Avatar_File['tmp_name']);
+              break;
+          }
+
+          if (!$source_image) {
+            $Text = "<div><b style='color: #ff0000;'>Failed to process image. The file may be corrupted or an unsupported image format.</b></div>";
+          } else {
+            // Always save as PNG for consistency and to strip potential issues
+            $New_Filename_Base = $Clan_Data['ID']; // Use Clan ID for filename
+            $New_Filepath_Relative = '/Avatars/Clan/' . $New_Filename_Base . '.png';
+            $Destination_Full_Path = dirname(__FILE__, 4) . '/images' . $New_Filepath_Relative;
+
+            // Ensure target directory exists (it should, but good practice)
+            $clan_avatar_dir = dirname($Destination_Full_Path);
+            if (!is_dir($clan_avatar_dir)) {
+                mkdir($clan_avatar_dir, 0755, true);
+            }
+
+            // Re-save the image as PNG
+            if (imagepng($source_image, $Destination_Full_Path)) {
+              imagedestroy($source_image);
+              try {
+                $Update_Avatar = $pdo_instance->prepare("UPDATE `clans` SET `Avatar` = ? WHERE `ID` = ? LIMIT 1");
+                $Update_Avatar->execute([ $New_Filepath_Relative, $Clan_Data['ID'] ]);
+                $Text = "<div><b style='color: #00ff00;'>Clan avatar uploaded and updated successfully!</b></div>";
+                // Update $New_Filepath to be the relative path for the JSON response
+                $New_Filepath = $New_Filepath_Relative;
+              } catch ( PDOException $e ) {
+                HandleError($e);
+                $Text = "<div><b style='color: #ff0000;'>Database error during avatar update. Avatar file was processed but not saved to profile.</b></div>";
+                // Optionally delete the processed file if DB update fails: if (file_exists($Destination_Full_Path)) unlink($Destination_Full_Path);
+                $New_Filepath = null; // Prevent using this path in JSON response if DB fails
+              }
+            } else {
+              imagedestroy($source_image);
+              $Text = "<div><b style='color: #ff0000;'>Failed to save processed image.</b></div>";
+              $New_Filepath = null;
+            }
+          }
+        }
+      } else {
         $Text = "<div><b style='color: #ff0000;'>File upload error or no file selected.</b></div>";
       }
     }

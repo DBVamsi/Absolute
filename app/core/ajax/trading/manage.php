@@ -6,8 +6,8 @@
 	 */
 	if ( isset($_POST['Trade_ID']) && isset($_POST['Action']) )
 	{
-		$Trade_ID = Purify($_POST['Trade_ID']);
-		$Action = Purify($_POST['Action']);
+		$Trade_ID = isset($_POST['Trade_ID']) ? (int)$_POST['Trade_ID'] : 0;
+		$Action = Purify($_POST['Action']); // String action, Purify is acceptable
 
 		try
 		{

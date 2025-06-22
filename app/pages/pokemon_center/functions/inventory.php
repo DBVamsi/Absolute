@@ -12,17 +12,31 @@
     global $Item_Service, $User_Data; // Use ItemService
 
     // Direct PDO query is now encapsulated in ItemService
-    return $Item_Service->GetUserInventoryByCategory($User_Data['ID'], $Inventory_Tab);
+    $Inventory_Items = $Item_Service->GetUserInventoryByCategory($User_Data['ID'], $Inventory_Tab);
+    if (is_array($Inventory_Items)) {
+      foreach ($Inventory_Items as $Key => $Item) {
+        // Assuming Item_Name and Icon are fields that need escaping for HTML in JS
+        if (isset($Item['Item_Name'])) {
+          $Inventory_Items[$Key]['Item_Name'] = htmlspecialchars($Item['Item_Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+        // Icon path from Item_Name, JS constructs full path. Item_Name itself is used.
+        // If Item_Icon field exists and is a full path, it should be escaped.
+        // Current JS uses Item_Name to construct path: /images/Items/${Item.Item_Name}.png
+        // So Item_Name needs to be safe for URL path component and for display.
+        // htmlspecialchars on Item_Name already helps.
+      }
+    }
+    return $Inventory_Items;
   }
 
   /**
    * Get the user's items that are currently equipped to Pokemon.
+   * Returns data pre-escaped for safe HTML rendering by client-side JavaScript.
    */
   function GetEquippedItems()
   {
-    global $Pokemon_Service, $Item_Class, $User_Data; // Item_Class for FetchItemData
+    global $Pokemon_Service, $Item_Class, $User_Data;
 
-    // Direct PDO query is now encapsulated in PokemonService
     $Equipped_Pokemon_With_Items = $Pokemon_Service->GetPokemonWithItems($User_Data['ID']);
 
     $Formatted_Equipped_Items = [];
@@ -30,22 +44,20 @@
     {
       foreach ( $Equipped_Pokemon_With_Items as $Pokemon_With_Item )
       {
-        // GetPokemonData is already part of PokemonService, but we have basic info.
-        // FetchItemData is part of Item_Class (which is ItemService instance)
-        $Item_Info = $Item_Class->FetchItemData($Pokemon_With_Item['Item_ID']); // Item_ID from the new service method
+        $Item_Info = $Item_Class->FetchItemData($Pokemon_With_Item['Item_ID']);
 
         if ($Item_Info)
         {
           $Formatted_Equipped_Items[] = [
             'Pokemon' => [
-              'ID' => $Pokemon_With_Item['ID'], // Pokemon ID
-              'Name' => $Pokemon_With_Item['Display_Name'], // Pokemon Name from new service method
-              'Icon' => $Pokemon_With_Item['Icon'], // Pokemon Icon from new service method
+              'ID' => $Pokemon_With_Item['ID'],
+              'Name' => htmlspecialchars($Pokemon_With_Item['Display_Name'] ?? 'Unknown Pok&eacute;mon', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+              'Icon' => htmlspecialchars($Pokemon_With_Item['Icon'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
             ],
             'Item' => [
               'ID' => $Item_Info['ID'],
-              'Name' => $Item_Info['Name'],
-              'Icon' => $Item_Info['Icon']
+              'Name' => htmlspecialchars($Item_Info['Name'] ?? 'Unknown Item', ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+              'Icon' => htmlspecialchars($Item_Info['Icon'] ?? '', ENT_QUOTES | ENT_HTML5, 'UTF-8')
             ]
           ];
         }
@@ -78,13 +90,14 @@
       {
         if ( isset($User_Data['Roster'][$i]['ID']) )
         {
-          $Pokemon = $Pokemon_Service->GetPokemonData($User_Data['Roster'][$i]['ID']); // Updated call
+          $Pokemon = $Pokemon_Service->GetPokemonData($User_Data['Roster'][$i]['ID']);
+          $Pokemon_Icon_Escaped = htmlspecialchars($Pokemon['Icon'] ?? (DOMAIN_SPRITES . "/Pokemon/Sprites/0_mini.png"), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
           if ( !$Pokemon['Item'] )
           {
             $Slot_Text .= "
               <td colspan='1' style='width: calc(100% / 6);'>
-                <img src='{$Pokemon['Icon']}' onclick=\"EquipItem({$Item_Data['ID']}, {$Pokemon['ID']});\" />
+                <img src='{$Pokemon_Icon_Escaped}' onclick=\"EquipItem({$Item_Data['ID']}, {$Pokemon['ID']});\" />
               </td>
             ";
           }
@@ -92,18 +105,18 @@
           {
             $Slot_Text .= "
               <td colspan='1' style='width: calc(100% / 6);'>
-                <img src='{$Pokemon['Icon']}' style='filter: grayscale(100%);' />
+                <img src='{$Pokemon_Icon_Escaped}' style='filter: grayscale(100%);' />
               </td>
             ";
           }
         }
         else
         {
-          $Pokemon_Icon = DOMAIN_SPRITES . "/Pokemon/Sprites/0_mini.png"; // Default icon
+          $Pokemon_Icon_Escaped = htmlspecialchars(DOMAIN_SPRITES . "/Pokemon/Sprites/0_mini.png", ENT_QUOTES | ENT_HTML5, 'UTF-8'); // Default icon
 
           $Slot_Text .= "
             <td colspan='1' style='width: calc(100% / 6);'>
-              <img src='{$Pokemon_Icon}' style='filter: grayscale(100%);' />
+              <img src='{$Pokemon_Icon_Escaped}' style='filter: grayscale(100%);' />
             </td>
           ";
         }
@@ -121,18 +134,22 @@
       }
     }
 
+    $Item_Icon_Escaped = htmlspecialchars($Item_Data['Icon'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $Item_Name_Escaped = htmlspecialchars($Item_Data['Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $Item_Description_Escaped = nl2br(htmlspecialchars($Item_Data['Description'], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
     return "
       <tr>
         <td colspan='3'>
-          <img src='{$Item_Data['Icon']}' />
+          <img src='{$Item_Icon_Escaped}' alt='{$Item_Name_Escaped}' />
         </td>
         <td colspan='3'>
-          <b>{$Item_Data['Name']}</b>
+          <b>{$Item_Name_Escaped}</b>
         </td>
       </tr>
       <tr>
         <td colspan='6' style='padding: 5px;'>
-          {$Item_Data['Description']}
+          {$Item_Description_Escaped}
         </td>
       </tr>
       <tr>
@@ -178,9 +195,11 @@
 
     if ( $Attach_Item )
     {
+      $Item_Name_Escaped_Msg = htmlspecialchars($Item_Data['Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+      $Poke_Display_Name_Escaped_Msg = htmlspecialchars($Poke_Data['Display_Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
       return [
         'Success' => true,
-        'Message' => "You have attached a {$Item_Data['Name']} to your {$Poke_Data['Display_Name']}."
+        'Message' => "You have attached a <b>{$Item_Name_Escaped_Msg}</b> to your <b>{$Poke_Display_Name_Escaped_Msg}</b>."
       ];
     }
 

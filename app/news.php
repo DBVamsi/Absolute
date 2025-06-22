@@ -42,17 +42,17 @@
 	<thead>
 		<tr>
 			<th colspan='2'>
-				<?= $News_Post['News_Title']; ?>
+				<?= htmlspecialchars($News_Post['News_Title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?>
 			</th>
 		</tr>
 	</thead>
 	<tbody>
 		<tr>
 			<td style='padding: 5px 30px; width: 150px;'>
-				<img src='<?= DOMAIN_SPRITES . '/' . $News_Poster['Avatar']; ?>' /><br />
+				<img src='<?= DOMAIN_SPRITES . '/' . ($News_Post['Avatar'] ?? 'default_avatar.png'); ?>' /><br />
 				<?php
 					echo '<h3>' . $User_Class->DisplayUserName($News_Post['Poster_ID'], false, false, true) . '</h3>';
-					echo $News_Post['News_Date'];
+					echo htmlspecialchars($News_Post['News_Date'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
 				?>
 			</td>
 

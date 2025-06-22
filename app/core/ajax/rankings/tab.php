@@ -14,8 +14,17 @@
     return;
   }
 
-  $Tab = Purify($_POST['Tab']);
-  $Current_Page = isset($_POST['Page']) ? Purify($_POST['Page']) : 1;
+  $allowed_tabs = ['Pokemon', 'Trainer'];
+  $Tab_Input = $_POST['Tab'] ?? 'Pokemon'; // Default to Pokemon
+
+  if (!in_array($Tab_Input, $allowed_tabs, true)) {
+    $Tab = 'Pokemon'; // Default to a safe value if input is not allowed
+  } else {
+    $Tab = $Tab_Input;
+  }
+
+  $Current_Page = isset($_POST['Page']) ? (int)$_POST['Page'] : 1;
+  if ($Current_Page < 1) $Current_Page = 1;
   $Display_Limit = 20;
 
   $Begin = ($Current_Page - 1) * $Display_Limit;
@@ -93,30 +102,34 @@
 ?>
 
 <div style='flex-basis: 100%; width: 100%;'>
-  <h3><?= $Tab; ?> Rankings</h3>
+  <h3><?= htmlspecialchars($Tab, ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?> Rankings</h3>
 </div>
 
 <table class='border-gradient' style='margin: 5px auto; flex-basis: 35%; width: 35%;'>
   <thead>
     <th colspan='3'>
-      <b><?= (isset($First_Place['Display_Name']) ? $First_Place['Display_Name'] : $First_Place['Username']); ?></b>
+      <b><?= htmlspecialchars((isset($First_Place['Display_Name']) ? $First_Place['Display_Name'] : ($First_Place['Username'] ?? 'N/A')), ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?></b>
     </th>
   </thead>
   <tbody>
     <tr>
       <td colspan='1' rowspan='2' style='width: 100px;'>
-        <img src='<?= (isset($First_Place['Sprite']) ? $First_Place['Sprite'] : $First_Place['Avatar']); ?>' />
+        <img src='<?= htmlspecialchars((isset($First_Place['Sprite']) ? $First_Place['Sprite'] : ($First_Place['Avatar'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?>' />
       </td>
       <td colspan='2'>
-        <b><?= (isset($First_Place['Display_Name']) ? $First_Place['Display_Name'] : $First_Place_User); ?></b>
-        <?= (isset($First_Place['Nickname']) ? "<br />( <i>{$First_Place['Nickname']}</i> )" : '') ?>
+        <?php
+          // $First_Place_User is already HTML from DisplayUserName, $First_Place['Display_Name'] needs escaping
+          $first_place_name_display = isset($First_Place['Display_Name']) ? htmlspecialchars($First_Place['Display_Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : $First_Place_User;
+        ?>
+        <b><?= $first_place_name_display; ?></b>
+        <?= (isset($First_Place['Nickname']) ? "<br />( <i>" . htmlspecialchars($First_Place['Nickname'], ENT_QUOTES | ENT_HTML5, 'UTF-8') . "</i> )" : '') ?>
       </td>
     </tr>
     <tr>
       <td colspan='2'>
-        <b>Level</b>: <?= (isset($First_Place['Level']) ? $First_Place['Level'] : $First_Place[$Tab . '_Level']); ?>
+        <b>Level</b>: <?= htmlspecialchars((isset($First_Place['Level']) ? $First_Place['Level'] : ($First_Place[$Tab . '_Level'] ?? 'N/A')), ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?>
         <br />
-        <b>Experience</b>: <?= (isset($First_Place['Experience']) ? $First_Place['Experience'] : $First_Place[$Tab . '_Exp']); ?>
+        <b>Experience</b>: <?= htmlspecialchars((isset($First_Place['Experience']) ? $First_Place['Experience'] : ($First_Place[$Tab . '_Exp'] ?? 'N/A')), ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?>
       </td>
     </tr>
     <tr>
@@ -125,24 +138,15 @@
           switch($Tab)
           {
             case 'Pokemon':
-              echo "
-                <b>Current Owner</b>
-                {$First_Place_User}
-              ";
-
+              echo "<b>Current Owner</b> {$First_Place_User}"; // $First_Place_User is HTML
               break;
 
             case 'Trainer':
-              echo $First_Place['Status'];
-
+              echo htmlspecialchars($First_Place['Status'] ?? 'N/A', ENT_QUOTES | ENT_HTML5, 'UTF-8');
               break;
 
             default:
-              echo "
-                <b>Current Owner</b>
-                {$First_Place_User}
-              ";
-
+              echo "<b>Current Owner</b> {$First_Place_User}"; // $First_Place_User is HTML
               break;
           }
         ?>
@@ -177,34 +181,34 @@
           $Username = $User_Class->DisplayUserName($Rank_Val['id'], false, false, true);
         }
 
-        $Display = [
-          'Sprite' => (isset($Poke_Rank_Data) ? $Poke_Rank_Data['Icon'] : $User_Rank_Data['Avatar']),
-          'Display_Name' => (isset($Poke_Rank_Data) ? $Poke_Rank_Data['Display_Name'] : $Username),
-          'Nickname' => (isset($Poke_Rank_Data) ? "<br /><i>{$Poke_Rank_Data['Nickname']}</i>" : ''),
-          'Level' => (isset($Poke_Rank_Data) ? $Poke_Rank_Data['Level'] : $User_Rank_Data['Trainer_Level']),
-          'Experience' => (isset($Poke_Rank_Data) ? $Poke_Rank_Data['Experience'] : $User_Rank_Data['Trainer_Exp']),
-          'Username' => (isset($Poke_Rank_Data) ? $Username : "<a href=''>Battle User</a>"),
-        ];
+        $Sprite_Escaped = htmlspecialchars((isset($Poke_Rank_Data) ? $Poke_Rank_Data['Icon'] : ($User_Rank_Data['Avatar'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // $Username is from DisplayUserName, already HTML. $Poke_Rank_Data['Display_Name'] needs escape.
+        $Display_Name_Escaped = (isset($Poke_Rank_Data) ? htmlspecialchars($Poke_Rank_Data['Display_Name'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : $Username);
+        $Nickname_Escaped = (isset($Poke_Rank_Data) && !empty($Poke_Rank_Data['Nickname'])) ? "<br /><i>" . htmlspecialchars($Poke_Rank_Data['Nickname'], ENT_QUOTES | ENT_HTML5, 'UTF-8') . "</i>" : '';
+        $Level_Escaped = htmlspecialchars((isset($Poke_Rank_Data) ? $Poke_Rank_Data['Level'] : ($User_Rank_Data['Trainer_Level'] ?? 'N/A')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $Experience_Escaped = htmlspecialchars((isset($Poke_Rank_Data) ? $Poke_Rank_Data['Experience'] : ($User_Rank_Data['Trainer_Exp'] ?? 'N/A')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // $Username for owner is already HTML. Static link is fine.
+        $Owner_Display_Escaped = (isset($Poke_Rank_Data) ? $Username : "<a href='javascript:void(0);'>Battle User</a>"); // Link could be more specific if needed
 
         echo "
           <tr>
             <td colspan='5' style='width: 50px;'>
-              #" . ($Rank_Key + $Begin) . "
+              #" . htmlspecialchars(($Rank_Key + $Begin), ENT_QUOTES | ENT_HTML5, 'UTF-8') . "
             </td>
             <td colspan='5' style='width: 100px;'>
-              <img src='{$Display['Sprite']}' />
+              <img src='{$Sprite_Escaped}' />
             </td>
-            <td colspan='9' style='width: 150px;'" . ($Tab === 'Pokemon' ? " data-src='" .DOMAIN_ROOT . "/core/ajax/pokemon.php?id={$Rank_Val['ID']}' class='popup'" : '') . ">
-                {$Display['Display_Name']}
-                {$Display['Nickname']}
+            <td colspan='9' style='width: 150px;'" . ($Tab === 'Pokemon' ? " data-src='" . htmlspecialchars(DOMAIN_ROOT . "/core/ajax/pokemon.php?id=" . ((int)$Rank_Val['ID']), ENT_QUOTES | ENT_HTML5, 'UTF-8') . "' class='popup'" : '') . ">
+                {$Display_Name_Escaped}
+                {$Nickname_Escaped}
             </td>
             <td colspan='9' style='width: 150px;'>
-              Level: {$Display['Level']}
+              Level: {$Level_Escaped}
               <br />
-              Exp: {$Display['Experience']}
+              Exp: {$Experience_Escaped}
             </td>
             <td colspan='7' style='width: 150px;'>
-              {$Display['Username']}
+              {$Owner_Display_Escaped}
             </td>
           </tr>
         ";

@@ -4,7 +4,7 @@
 
   $Move_ID = null;
   if ( !empty($_GET['Move_ID']) )
-    $Move_ID = Purify($_GET['Move_ID']);
+    $Move_ID = (int)$_GET['Move_ID'];
 
   try
   {
@@ -56,199 +56,199 @@
 
   $Accuracy = null;
   if ( !empty($_GET['Accuracy']) )
-    $Accuracy = Purify($_GET['Accuracy']);
+    $Accuracy = (int)$_GET['Accuracy'];
 
   $Power = null;
   if ( !empty($_GET['Power']) )
-    $Power = Purify($_GET['Power']);
+    $Power = (int)$_GET['Power'];
 
   $Priority = null;
   if ( !empty($_GET['Priority']) )
-    $Priority = Purify($_GET['Priority']);
+    $Priority = (int)$_GET['Priority'];
 
   $PP = null;
   if ( !empty($_GET['PP']) )
-    $PP = Purify($_GET['PP']);
+    $PP = (int)$_GET['PP'];
 
   $Damage_Type = null;
   if ( !empty($_GET['Damage_Type']) )
-    $Damage_Type = Purify($_GET['Damage_Type']);
+    $Damage_Type = Purify($_GET['Damage_Type']); // String, Purify fine
 
   $Move_Type = null;
   if ( !empty($_GET['Move_Type']) )
-    $Move_Type = Purify($_GET['Move_Type']);
+    $Move_Type = Purify($_GET['Move_Type']); // String, Purify fine
 
   $Category = null;
   if ( !empty($_GET['Category']) )
-    $Category = Purify($_GET['Category']);
+    $Category = Purify($_GET['Category']); // String, Purify fine
 
   $Ailment = null;
   if ( !empty($_GET['Ailment']) )
-    $Ailment = Purify($_GET['Ailment']);
+    $Ailment = Purify($_GET['Ailment']); // String, Purify fine
 
   $Flinch_Chance = null;
   if ( !empty($_GET['Flinch_Chance']) )
-    $Flinch_Chance = Purify($_GET['Flinch_Chance']);
+    $Flinch_Chance = (int)$_GET['Flinch_Chance'];
 
   $Crit_Chance = null;
   if ( !empty($_GET['Crit_Chance']) )
-    $Crit_Chance = Purify($_GET['Crit_Chance']);
+    $Crit_Chance = (int)$_GET['Crit_Chance'];
 
   $Effect_Chance = null;
   if ( !empty($_GET['Effect_Chance']) )
-    $Effect_Chance = Purify($_GET['Effect_Chance']);
+    $Effect_Chance = (int)$_GET['Effect_Chance'];
 
   $Ailment_Chance = null;
   if ( !empty($_GET['Ailment_Chance']) )
-    $Ailment_Chance = Purify($_GET['Ailment_Chance']);
+    $Ailment_Chance = (int)$_GET['Ailment_Chance'];
 
   $HP_Boost = null;
   if ( !empty($_GET['HP_Boost']) )
-    $HP_Boost = Purify($_GET['HP_Boost']);
+    $HP_Boost = (int)$_GET['HP_Boost'];
 
   $Attack_Boost = null;
   if ( !empty($_GET['Attack_Boost']) )
-    $Attack_Boost = Purify($_GET['Attack_Boost']);
+    $Attack_Boost = (int)$_GET['Attack_Boost'];
 
   $Defense_Boost = null;
   if ( !empty($_GET['Defense_Boost']) )
-    $Defense_Boost = Purify($_GET['Defense_Boost']);
+    $Defense_Boost = (int)$_GET['Defense_Boost'];
 
   $Sp_Attack_Boost = null;
   if ( !empty($_GET['Sp_Attack_Boost']) )
-    $Sp_Attack_Boost = Purify($_GET['Sp_Attack_Boost']);
+    $Sp_Attack_Boost = (int)$_GET['Sp_Attack_Boost'];
 
   $Sp_Defense_Boost = null;
   if ( !empty($_GET['Sp_Defense_Boost']) )
-    $Sp_Defense_Boost = Purify($_GET['Sp_Defense_Boost']);
+    $Sp_Defense_Boost = (int)$_GET['Sp_Defense_Boost'];
 
   $Speed_Boost = null;
   if ( !empty($_GET['Speed_Boost']) )
-    $Speed_Boost = Purify($_GET['Speed_Boost']);
+    $Speed_Boost = (int)$_GET['Speed_Boost'];
 
   $Accuracy_Boost = null;
   if ( !empty($_GET['Accuracy_Boost']) )
-    $Accuracy_Boost = Purify($_GET['Accuracy_Boost']);
+    $Accuracy_Boost = (int)$_GET['Accuracy_Boost'];
 
   $Evasion_Boost = null;
   if ( !empty($_GET['Evasion_Boost']) )
-    $Evasion_Boost = Purify($_GET['Evasion_Boost']);
+    $Evasion_Boost = (int)$_GET['Evasion_Boost'];
 
   $Min_Hits = null;
   if ( !empty($_GET['Min_Hits']) )
-    $Min_Hits = Purify($_GET['Min_Hits']);
+    $Min_Hits = (int)$_GET['Min_Hits'];
 
   $Max_Hits = null;
   if ( !empty($_GET['Max_Hits']) )
-    $Max_Hits = Purify($_GET['Max_Hits']);
+    $Max_Hits = (int)$_GET['Max_Hits'];
 
   $Min_Turns = null;
   if ( !empty($_GET['Min_Turns']) )
-    $Min_Turns = Purify($_GET['Min_Turns']);
+    $Min_Turns = (int)$_GET['Min_Turns'];
 
   $Max_Turns = null;
   if ( !empty($_GET['Max_Turns']) )
-    $Max_Turns = Purify($_GET['Max_Turns']);
+    $Max_Turns = (int)$_GET['Max_Turns'];
 
   $Recoil = null;
   if ( !empty($_GET['Recoil']) )
-    $Recoil = Purify($_GET['Recoil']);
+    $Recoil = (int)$_GET['Recoil'];
 
   $Drain = null;
   if ( !empty($_GET['Drain']) )
-    $Drain = Purify($_GET['Drain']);
+    $Drain = (int)$_GET['Drain'];
 
   $Healing = null;
   if ( !empty($_GET['Healing']) )
-    $Healing = Purify($_GET['Healing']);
+    $Healing = (int)$_GET['Healing'];
 
   $Stat_Chance = null;
   if ( !empty($_GET['Stat_Chance']) )
-    $Stat_Chance = Purify($_GET['Stat_Chance']);
+    $Stat_Chance = (int)$_GET['Stat_Chance'];
 
   $authentic = null;
   if ( !empty($_GET['authentic']) )
-    $authentic = Purify($_GET['authentic']);
+    $authentic = (int)$_GET['authentic'];
 
   $bite = null;
   if ( !empty($_GET['bite']) )
-    $bite = Purify($_GET['bite']);
+    $bite = (int)$_GET['bite'];
 
   $bullet = null;
   if ( !empty($_GET['bullet']) )
-    $bullet = Purify($_GET['bullet']);
+    $bullet = (int)$_GET['bullet'];
 
   $charge = null;
   if ( !empty($_GET['charge']) )
-    $charge = Purify($_GET['charge']);
+    $charge = (int)$_GET['charge'];
 
   $contact = null;
   if ( !empty($_GET['contact']) )
-    $contact = Purify($_GET['contact']);
+    $contact = (int)$_GET['contact'];
 
   $dance = null;
   if ( !empty($_GET['dance']) )
-    $dance = Purify($_GET['dance']);
+    $dance = (int)$_GET['dance'];
 
   $defrost = null;
   if ( !empty($_GET['defrost']) )
-    $defrost = Purify($_GET['defrost']);
+    $defrost = (int)$_GET['defrost'];
 
   $distance = null;
   if ( !empty($_GET['distance']) )
-    $distance = Purify($_GET['distance']);
+    $distance = (int)$_GET['distance'];
 
   $gravity = null;
   if ( !empty($_GET['gravity']) )
-    $gravity = Purify($_GET['gravity']);
+    $gravity = (int)$_GET['gravity'];
 
   $heal = null;
   if ( !empty($_GET['heal']) )
-    $heal = Purify($_GET['heal']);
+    $heal = (int)$_GET['heal'];
 
   $mirror = null;
   if ( !empty($_GET['mirror']) )
-    $mirror = Purify($_GET['mirror']);
+    $mirror = (int)$_GET['mirror'];
 
   $mystery = null;
   if ( !empty($_GET['mystery']) )
-    $mystery = Purify($_GET['mystery']);
+    $mystery = (int)$_GET['mystery'];
 
   $nonsky = null;
   if ( !empty($_GET['nonsky']) )
-    $nonsky = Purify($_GET['nonsky']);
+    $nonsky = (int)$_GET['nonsky'];
 
   $powder = null;
   if ( !empty($_GET['powder']) )
-    $powder = Purify($_GET['powder']);
+    $powder = (int)$_GET['powder'];
 
   $protect = null;
   if ( !empty($_GET['protect']) )
-    $protect = Purify($_GET['protect']);
+    $protect = (int)$_GET['protect'];
 
   $pulse = null;
   if ( !empty($_GET['pulse']) )
-    $pulse = Purify($_GET['pulse']);
+    $pulse = (int)$_GET['pulse'];
 
   $punch = null;
   if ( !empty($_GET['punch']) )
-    $punch = Purify($_GET['punch']);
+    $punch = (int)$_GET['punch'];
 
   $recharge = null;
   if ( !empty($_GET['recharge']) )
-    $recharge = Purify($_GET['recharge']);
+    $recharge = (int)$_GET['recharge'];
 
   $reflectable = null;
   if ( !empty($_GET['reflectable']) )
-    $reflectable = Purify($_GET['reflectable']);
+    $reflectable = (int)$_GET['reflectable'];
 
   $snatch = null;
   if ( !empty($_GET['snatch']) )
-    $snatch = Purify($_GET['snatch']);
+    $snatch = (int)$_GET['snatch'];
 
   $sound = null;
   if ( !empty($_GET['sound']) )
-    $sound = Purify($_GET['sound']);
+    $sound = (int)$_GET['sound'];
 
 
   switch ( $Action )

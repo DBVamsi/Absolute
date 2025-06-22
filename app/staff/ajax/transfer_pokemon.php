@@ -32,7 +32,7 @@
 
   $Transfer_To_User_ID = null;
   if ( !empty($_GET['Transfer_To_User_ID']) )
-    $Transfer_To_User_ID = Purify($_GET['Transfer_To_User_ID']);
+    $Transfer_To_User_ID = (int)$_GET['Transfer_To_User_ID'];
 
   switch ( $Pokemon_Action )
   {
